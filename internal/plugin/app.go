@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/nguyenha935/manager-key-pro/internal/crypto"
+	"github.com/nguyenha935/manager-key-pro/internal/billing"
 	"github.com/nguyenha935/manager-key-pro/internal/store"
 )
 
@@ -182,7 +183,7 @@ func handleInterceptBefore(payload []byte) ([]byte, error) {
 	return okEnvelopeJSON(`{}`)
 }
 
-func handleUsage(payload []byte) ([]byte, error) {
+func handleUsageStub(payload []byte) ([]byte, error) {
 	// TODO: billing — charge key quota or wallet, apply 3 anti-duplicate rules.
 	// For now, just acknowledge so CPA doesn't log errors.
 	return okEnvelopeJSON(`{}`)
@@ -192,5 +193,16 @@ func handleComplete(payload []byte) ([]byte, error) {
 	// request.complete arrives once per client request. Use it to release holds
 	// that never got a usage.handle (e.g. timeout before upstream responds).
 	// For v0.1, nothing to do yet.
+	return okEnvelopeJSON(`{}`)
+}
+
+func handleUsage(payload []byte) ([]byte, error) {
+	if app == nil {
+		return okEnvelopeJSON(`{}`)
+	}
+	if errCharge := billing.HandleUsageJSON(app.db, payload); errCharge != nil {
+		// Log but don't return error — CPA expects OK even on plugin failure.
+		return okEnvelopeJSON(`{}`)
+	}
 	return okEnvelopeJSON(`{}`)
 }
