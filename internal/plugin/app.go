@@ -7,8 +7,8 @@ import (
 	"log"
 	"strings"
 
-	"github.com/nguyenha935/manager-key-pro/internal/crypto"
 	"github.com/nguyenha935/manager-key-pro/internal/billing"
+	"github.com/nguyenha935/manager-key-pro/internal/crypto"
 	"github.com/nguyenha935/manager-key-pro/internal/store"
 )
 
@@ -73,17 +73,32 @@ type frontendAuthResponse struct {
 }
 
 func handleAuthenticate(payload []byte) ([]byte, error) {
+	log.Printf("[mkp] handleAuthenticate called")
 	if app == nil {
 		return okEnvelopeJSON(`{"Authenticated":false}`)
 	}
 	var req frontendAuthRequest
 	if errUnmarshal := json.Unmarshal(payload, &req); errUnmarshal != nil {
+		log.Printf("[mkp] auth unmarshal error: %v", errUnmarshal)
 		return okEnvelopeJSON(`{"Authenticated":false}`)
 	}
 
 	// CPA reads keys from 5 sources (config_access/provider.go:62-86).
 	// §8 research confirmed all five arrive in Headers/Query; read them all.
 	plaintext := extractKey(req.Headers, req.Query)
+	hkeys := ""
+	for k := range req.Headers {
+		hkeys += k + " "
+	}
+	info := ""
+	if len(plaintext) >= 10 {
+		info = plaintext[:10] + "..."
+	} else if plaintext != "" {
+		info = plaintext + "..."
+	} else {
+		info = "(none)"
+	}
+	log.Printf("[mkp] handleAuthenticate called:0: %s", info)
 	if plaintext == "" {
 		return okEnvelopeJSON(`{"Authenticated":false}`)
 	}
@@ -200,9 +215,15 @@ func handleUsage(payload []byte) ([]byte, error) {
 	if app == nil {
 		return okEnvelopeJSON(`{}`)
 	}
+	// Dump first 800 bytes of the payload once so we can verify wire format.
 	if errCharge := billing.HandleUsageJSON(app.db, payload); errCharge != nil {
-		// Log but don't return error — CPA expects OK even on plugin failure.
+		log.Printf("[mkp] charge error: %v", errCharge)
 		return okEnvelopeJSON(`{}`)
 	}
+	return okEnvelopeJSON(`{}`)
+}
+
+func handleInterceptAfter(payload []byte) ([]byte, error) {
+	// intercept_after runs per upstream attempt. For v0.1, nothing to do.
 	return okEnvelopeJSON(`{}`)
 }

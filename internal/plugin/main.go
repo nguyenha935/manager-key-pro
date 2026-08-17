@@ -129,6 +129,8 @@ func handleMethod(method string, payload []byte) ([]byte, error) {
 		return handleAuthenticate(payload)
 	case "request.intercept_before":
 		return handleInterceptBefore(payload)
+	case "request.intercept_after":
+		return handleInterceptAfter(payload)
 	case "usage.handle":
 		return handleUsage(payload)
 	case "request.complete":
@@ -171,6 +173,7 @@ func writeResponse(response *C.cliproxy_buffer, raw []byte) {
 }
 
 func handleRegister(payload []byte) ([]byte, error) {
+	log.Printf("[mkp] handleRegister called")
 	var req struct {
 		SchemaVersion int    `json:"schema_version"`
 		ConfigYAML    string `json:"config_yaml"`
@@ -180,18 +183,22 @@ func handleRegister(payload []byte) ([]byte, error) {
 	}
 	// TODO: parse ConfigYAML for db_path, encryption_key_path, etc.
 	// For now, boot with defaults.
-	var errBoot error
-	app, errBoot = Boot(Config{
-		DBPath:    "/root/cliproxyapi/mkp.db",
-		SecretKey: "00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff", // TEMP: 64 hex = 32 bytes
-	})
-	if errBoot != nil {
-		return nil, fmt.Errorf("boot: %w", errBoot)
+	if app == nil {
+		log.Printf("[mkp] booting app...")
+		var errBoot error
+		app, errBoot = Boot(Config{
+			DBPath:    "/root/cliproxyapi/mkp.db",
+			SecretKey: "00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff", // TEMP: 64 hex = 32 bytes
+		})
+		if errBoot != nil {
+			return nil, fmt.Errorf("boot: %w", errBoot)
+		}
+		log.Printf("[mkp] boot complete")
 	}
 	reg := map[string]any{
 		"schema_version": 1,
 		"metadata": map[string]any{
-			"Name":             "Manager Key Pro",
+			"Name":             "manager-key-pro",
 			"Version":          "0.0.1",
 			"Author":           "nguyenha935",
 			"GitHubRepository": "https://github.com/nguyenha935/manager-key-pro",
@@ -212,6 +219,9 @@ func handleRegister(payload []byte) ([]byte, error) {
 }
 
 func handleReconfigure(payload []byte) ([]byte, error) {
-	// Hot config reload: re-read config_yaml and apply. Not needed for v0.1.
-	return okEnvelopeJSON(`{}`)
+	// Reconfiguration must return the full registration envelope again
+	// (same as plugin.register). The PoC proved an empty result makes the host
+	// drop the capabilities (invalid metadata or no capabilities) and none of
+	// the hooks get called after that.
+	return handleRegister(payload)
 }

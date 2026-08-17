@@ -1,17 +1,17 @@
 // Package billing implements token-based charging with three anti-duplicate rules
 // verified by the PoC run (2026-08-18, see cpa-research-findings.md §13b):
 //
-// 1. Charge by tokens, not hook invocations — CPA retries create multiple
-//    usage.handle calls with Failed=true and TotalTokens=0; charging per call
-//    would bill customers 2x for a single failed request.
+//  1. Charge by tokens, not hook invocations — CPA retries create multiple
+//     usage.handle calls with Failed=true and TotalTokens=0; charging per call
+//     would bill customers 2x for a single failed request.
 //
-// 2. Aggregate request quota by client_request_id — one client question may hit
-//    several upstream accounts (fallback), but counts as one "request" toward a
-//    request-scoped quota.
+//  2. Aggregate request quota by client_request_id — one client question may hit
+//     several upstream accounts (fallback), but counts as one "request" toward a
+//     request-scoped quota.
 //
-// 3. Hold once at intercept_before, settle at usage.handle — intercept_before runs
-//    once per client request; intercept_after runs per attempt (PoC saw 3 after-calls
-//    for 2 usage records on a failed request).
+//  3. Hold once at intercept_before, settle at usage.handle — intercept_before runs
+//     once per client request; intercept_after runs per attempt (PoC saw 3 after-calls
+//     for 2 usage records on a failed request).
 //
 // For v0.1, we skip the hold mechanism and settle directly at usage.handle, which
 // means no reservation against concurrent requests. That's acceptable for initial
