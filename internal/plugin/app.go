@@ -9,6 +9,7 @@ import (
 
 	"github.com/nguyenha935/manager-key-pro/internal/billing"
 	"github.com/nguyenha935/manager-key-pro/internal/crypto"
+	"github.com/nguyenha935/manager-key-pro/internal/portal"
 	"github.com/nguyenha935/manager-key-pro/internal/store"
 )
 
@@ -16,12 +17,22 @@ import (
 type Config struct {
 	DBPath    string
 	SecretKey string // 64 hex chars = 32 bytes for AES-256
+	// Portal settings.
+	PortalListen     string
+	PortalBaseURL    string
+	TelegramBotToken string
+	RegistrationOpen bool
+	RequireApproval  bool
+	MinPasswordLen   int
+	LoginLockAfter   int
+	SessionTTLDays   int
 }
 
 // App is the plugin's global state: DB handle + repos + config.
 type App struct {
 	db        *store.DB
 	secretKey []byte
+	portal    *portal.Server
 }
 
 // Boot opens the database and prepares the repositories.
@@ -52,13 +63,31 @@ func Boot(cfg Config) (*App, error) {
 		log.Printf("[mkp] seed pricing: %v", errSeed)
 	}
 	log.Printf("[mkp] booted: schema v%d, db %s", version, cfg.DBPath)
-	return &App{db: db, secretKey: secretKey}, nil
+	a := &App{db: db, secretKey: secretKey}
+	// Start the user portal listener when configured.
+	if cfg.PortalListen != "" {
+		a.portal = portal.New(db, portal.Config{
+			Listen:           cfg.PortalListen,
+			BaseURL:          cfg.PortalBaseURL,
+			TelegramBotToken: cfg.TelegramBotToken,
+			RegistrationOpen: cfg.RegistrationOpen,
+			RequireApproval:  cfg.RequireApproval,
+			MinPasswordLen:   cfg.MinPasswordLen,
+			LoginLockAfter:   cfg.LoginLockAfter,
+			SessionTTLDays:   cfg.SessionTTLDays,
+		})
+		a.portal.Start()
+	}
+	return a, nil
 }
 
 // Close releases the database handle.
 func (a *App) Close() error {
 	if a == nil || a.db == nil {
 		return nil
+	}
+	if a.portal != nil {
+		a.portal.Stop()
 	}
 	return a.db.Close()
 }

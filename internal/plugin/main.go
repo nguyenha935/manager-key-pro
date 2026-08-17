@@ -198,8 +198,16 @@ func handleRegister(payload []byte) ([]byte, error) {
 		log.Printf("[mkp] config parsed: db=%s log_mode=%s", cfg.DBPath, cfg.LogMode)
 		var errBoot error
 		app, errBoot = Boot(Config{
-			DBPath:    cfg.DBPath,
-			SecretKey: cfg.EncryptionKey,
+			DBPath:           cfg.DBPath,
+			SecretKey:        cfg.EncryptionKey,
+			PortalListen:     cfg.PortalListen,
+			PortalBaseURL:    cfg.PortalBaseURL,
+			TelegramBotToken: cfg.TelegramBotToken,
+			RegistrationOpen: cfg.RegistrationOpen,
+			RequireApproval:  cfg.RequireApproval,
+			MinPasswordLen:   cfg.MinPasswordLen,
+			LoginLockAfter:   cfg.LoginLockAfter,
+			SessionTTLDays:   cfg.SessionTTLDays,
 		})
 		if errBoot != nil {
 			return nil, fmt.Errorf("boot: %w", errBoot)
