@@ -131,6 +131,10 @@ func handleMethod(method string, payload []byte) ([]byte, error) {
 		return handleInterceptBefore(payload)
 	case "request.intercept_after":
 		return handleInterceptAfter(payload)
+	case "management.register":
+		return managementRegister()
+	case "management.handle":
+		return handleManagement(payload)
 	case "usage.handle":
 		return handleUsage(payload)
 	case "request.complete":
@@ -181,19 +185,22 @@ func handleRegister(payload []byte) ([]byte, error) {
 	if errUnmarshal := json.Unmarshal(payload, &req); errUnmarshal != nil {
 		return nil, fmt.Errorf("unmarshal register: %w", errUnmarshal)
 	}
-	// TODO: parse ConfigYAML for db_path, encryption_key_path, etc.
-	// For now, boot with defaults.
+	// Parse the config YAML delivered by CPA and boot once.
 	if app == nil {
 		log.Printf("[mkp] booting app...")
+		cfg, errCfg := parseConfigYAML(req.ConfigYAML)
+		if errCfg != nil {
+			return nil, fmt.Errorf("parse config: %w", errCfg)
+		}
 		var errBoot error
 		app, errBoot = Boot(Config{
-			DBPath:    "/root/cliproxyapi/mkp.db",
-			SecretKey: "00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff", // TEMP: 64 hex = 32 bytes
+			DBPath:    cfg.DBPath,
+			SecretKey: cfg.EncryptionKey,
 		})
 		if errBoot != nil {
 			return nil, fmt.Errorf("boot: %w", errBoot)
 		}
-		log.Printf("[mkp] boot complete")
+		log.Printf("[mkp] boot complete: db=%s log_mode=%s", cfg.DBPath, cfg.LogMode)
 	}
 	reg := map[string]any{
 		"schema_version": 1,
@@ -209,6 +216,7 @@ func handleRegister(payload []byte) ([]byte, error) {
 			"request_interceptor":      true,
 			"usage_plugin":             true,
 			"request_lifecycle_plugin": true,
+			"management_api":           true,
 		},
 	}
 	raw, errMarshal := json.Marshal(reg)
