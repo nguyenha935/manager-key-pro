@@ -188,10 +188,14 @@ func handleRegister(payload []byte) ([]byte, error) {
 	// Parse the config YAML delivered by CPA and boot once.
 	if app == nil {
 		log.Printf("[mkp] booting app...")
+		// Dump the raw YAML once for debugging.
+		log.Printf("[mkp] config_yaml len=%d: %q", len(req.ConfigYAML), req.ConfigYAML)
 		cfg, errCfg := parseConfigYAML(req.ConfigYAML)
 		if errCfg != nil {
+			log.Printf("[mkp] parse config error: %v", errCfg)
 			return nil, fmt.Errorf("parse config: %w", errCfg)
 		}
+		log.Printf("[mkp] config parsed: db=%s log_mode=%s", cfg.DBPath, cfg.LogMode)
 		var errBoot error
 		app, errBoot = Boot(Config{
 			DBPath:    cfg.DBPath,

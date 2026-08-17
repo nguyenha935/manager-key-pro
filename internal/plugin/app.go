@@ -47,6 +47,10 @@ func Boot(cfg Config) (*App, error) {
 		}
 		return nil, fmt.Errorf("schema version: %w", errVersion)
 	}
+	// Seed the pricing table on first boot (no-op if rows already exist).
+	if errSeed := billing.SeedPricing(db); errSeed != nil {
+		log.Printf("[mkp] seed pricing: %v", errSeed)
+	}
 	log.Printf("[mkp] booted: schema v%d, db %s", version, cfg.DBPath)
 	return &App{db: db, secretKey: secretKey}, nil
 }

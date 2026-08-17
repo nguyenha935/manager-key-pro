@@ -71,9 +71,16 @@ func Charge(db *store.DB, rec UsageRecord) (int64, error) {
 		return 0, fmt.Errorf("lookup key for usage: %w", errKey)
 	}
 
-	// TODO: load pricing from the pricing table and compute cost.
-	// For v0.1, use a placeholder: 1 token = 1 micro-credit (unrealistic but testable).
-	cost := rec.Detail.TotalTokens
+	// Load pricing and compute cache-aware cost.
+	price, errPrice := LoadPrice(db, rec.Model)
+	if errPrice != nil {
+		log.Printf("[mkp] load price: %v — using total tokens as cost", errPrice)
+	}
+	cost := ComputeCost(rec, price)
+	if cost <= 0 && rec.Detail.TotalTokens > 0 {
+		// Fallback: charge 1 micro-credit per token if pricing is zero.
+		cost = rec.Detail.TotalTokens
+	}
 
 	// TODO: Rule 2 — aggregate request-scoped quota by client_request_id.
 	// For v0.1, we treat every usage.handle independently, which over-counts
