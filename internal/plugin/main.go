@@ -218,7 +218,7 @@ func handleRegister(payload []byte) ([]byte, error) {
 		"schema_version": 1,
 		"metadata": map[string]any{
 			"Name":             "manager-key-pro",
-			"Version":          "0.0.1",
+			"Version":          "0.1.0",
 			"Author":           "nguyenha935",
 			"GitHubRepository": "https://github.com/nguyenha935/manager-key-pro",
 			"ConfigFields":     []any{},
