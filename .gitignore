@@ -1,0 +1,6 @@
+mkp-poc.so
+*.so
+*.db
+*.db-wal
+*.db-shm
+observed.jsonl
