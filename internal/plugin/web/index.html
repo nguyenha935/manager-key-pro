@@ -104,8 +104,12 @@ function readPanelMgmtKey(){
   try {
     var w = window.parent || window;
     var raw = null;
-    try { raw = w.localStorage.getItem('managementKey'); } catch(e){ try { raw = localStorage.getItem('managementKey'); } catch(e2){} }
-    return raw ? _deobf(raw) : '';
+    try { raw = w.localStorage.getItem('cli-proxy-auth'); } catch(e){ try { raw = localStorage.getItem('cli-proxy-auth'); } catch(e2){} }
+    if (!raw) return '';
+    var dec = _deobf(raw);
+    try { var obj = JSON.parse(dec); if (obj && obj.managementKey) return obj.managementKey; } catch(e){}
+    // Legacy plaintext fallback
+    return '';
   } catch(e){ return ''; }
 }
 
@@ -391,7 +395,7 @@ function renderApp() {
   document.getElementById('root').innerHTML = `
   <div class="app">
     <div class="sidebar">
-      <div class="sidebar-brand"><h2>Manager Key Pro</h2><p>Admin Dashboard</p></div>
+      <div class="sidebar-brand"><h2>Manager Key Pro</h2><p>Admin Dashboard · v0.1.0-r2</p></div>
       ${navItems}
       <div style="padding:12px 20px;border-top:1px solid var(--line);margin-top:12px">
         <button class="btn btn-secondary btn-sm btn-block" onclick="logout()">Đăng xuất</button>
