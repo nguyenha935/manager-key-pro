@@ -68,8 +68,11 @@ func handleManagement(payload []byte) ([]byte, error) {
 		return mgmtJSON(http.StatusBadRequest, map[string]string{"error": "invalid request"})
 	}
 	// Strip the plugin prefix CPA may include.
+	// Note: resource routes arrive as /v0/resource/plugins/<id>/<path>, management
+	// routes as /v0/management/plugins/<id>/<path> — strip both.
 	path := req.Path
 	for _, prefix := range []string{
+		"/v0/resource/plugins/manager-key-pro",
 		"/v0/management/plugins/manager-key-pro",
 		"/plugins/manager-key-pro",
 		"/manager-key-pro",
