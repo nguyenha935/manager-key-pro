@@ -94,23 +94,27 @@ let currentPage = 'dashboard';
 const RESOURCE_BASE = '/v0/resource/plugins/manager-key-pro';
 const MGMT_BASE = '/v0/management/plugins/manager-key-pro';
 
-// Replicate the panel's reversible storage obfuscation so the admin iframe can
-// read the management key the panel already saved (same-origin localStorage).
+// Mirrors the panel's XOR obfuscation + zustand-persist envelope, exactly as
+// the official cpa-key-policy plugin does (see its web/src/store/panelAuth.ts).
 const ENC_PREFIX = 'enc::v1::';
 const SECRET_SALT = 'cli-proxy-api-webui::secure-storage';
+const STORAGE_KEY = 'cli-proxy-auth';
 function _xorkey(){ return new TextEncoder().encode(SECRET_SALT+'|'+window.location.host+'|'+navigator.userAgent); }
 function _deobf(p){ if(!p||!p.startsWith(ENC_PREFIX)) return p; var b=atob(p.slice(ENC_PREFIX.length)), k=_xorkey(), s=''; for(var i=0;i<b.length;i++){ s+=String.fromCharCode(b.charCodeAt(i)^k[i%k.length]);} return s; }
+function isEmbedded(){ try { return window.self !== window.top; } catch(e){ return false; } }
 function readPanelMgmtKey(){
+  if (!isEmbedded()) return '';
+  var raw = null;
+  try { raw = localStorage.getItem(STORAGE_KEY); } catch(e){ return ''; }
+  if (!raw) return '';
+  var dec = _deobf(raw);
   try {
-    var w = window.parent || window;
-    var raw = null;
-    try { raw = w.localStorage.getItem('cli-proxy-auth'); } catch(e){ try { raw = localStorage.getItem('cli-proxy-auth'); } catch(e2){} }
-    if (!raw) return '';
-    var dec = _deobf(raw);
-    try { var obj = JSON.parse(dec); if (obj && obj.managementKey) return obj.managementKey; } catch(e){}
-    // Legacy plaintext fallback
-    return '';
-  } catch(e){ return ''; }
+    var obj = JSON.parse(dec);
+    // zustand-persist envelope is { state: {...}, version }.
+    var state = (obj && obj.state) || obj;
+    if (state && typeof state.managementKey === 'string' && state.managementKey) return state.managementKey;
+  } catch(e){}
+  return '';
 }
 
 async function apiGet(path) {
@@ -395,7 +399,7 @@ function renderApp() {
   document.getElementById('root').innerHTML = `
   <div class="app">
     <div class="sidebar">
-      <div class="sidebar-brand"><h2>Manager Key Pro</h2><p>Admin Dashboard · v0.1.0-r2</p></div>
+      <div class="sidebar-brand"><h2>Manager Key Pro</h2><p>Admin Dashboard · v0.1.0-r3</p></div>
       ${navItems}
       <div style="padding:12px 20px;border-top:1px solid var(--line);margin-top:12px">
         <button class="btn btn-secondary btn-sm btn-block" onclick="logout()">Đăng xuất</button>
