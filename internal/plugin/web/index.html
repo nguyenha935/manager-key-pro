@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Manager Key Pro</title>
+<style>
+:root{--bg:#f4f6f8;--surface:#fff;--ink:#1a2332;--ink2:#5a6b7d;--ink3:#9aa8b8;--line:#e2e8f0;--accent:#2563eb;--accent-soft:#eff6ff;--green:#16a34a;--green-soft:#f0fdf4;--red:#dc2626;--red-soft:#fef2f2;--amber:#d97706;--amber-soft:#fffbeb;--radius:10px;--shadow:0 1px 3px rgba(0,0,0,.08),0 4px 12px rgba(0,0,0,.06)}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;font-size:14px;line-height:1.5}
+a{color:var(--accent);text-decoration:none}
+.login-wrap{display:flex;align-items:center;justify-content:center;min-height:100vh;padding:20px}
+.login-card{background:var(--surface);border-radius:16px;box-shadow:var(--shadow);padding:40px;width:100%;max-width:400px}
+.login-card h1{font-size:20px;font-weight:700;margin-bottom:6px}
+.login-card p{color:var(--ink2);font-size:13px;margin-bottom:24px}
+.login-card input{width:100%;padding:10px 14px;border:1px solid var(--line);border-radius:8px;font-size:14px;margin-bottom:16px;outline:none}
+.login-card input:focus{border-color:var(--accent)}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;border:none;transition:background .15s}
+.btn-primary{background:var(--accent);color:#fff}.btn-primary:hover{background:#1d4ed8}
+.btn-secondary{background:var(--surface);color:var(--ink);border:1px solid var(--line)}.btn-secondary:hover{background:var(--bg)}
+.btn-danger{background:var(--red);color:#fff}.btn-danger:hover{background:#b91c1c}
+.btn-sm{padding:5px 12px;font-size:12px}
+.btn-block{width:100%;justify-content:center}
+.app{display:flex;min-height:100vh}
+.sidebar{width:220px;background:var(--surface);border-right:1px solid var(--line);padding:20px 0;flex-shrink:0}
+.sidebar-brand{padding:0 20px 20px;border-bottom:1px solid var(--line);margin-bottom:12px}
+.sidebar-brand h2{font-size:15px;font-weight:700;color:var(--accent)}
+.sidebar-brand p{font-size:11px;color:var(--ink3);margin-top:2px}
+.nav-item{display:flex;align-items:center;gap:10px;padding:10px 20px;cursor:pointer;color:var(--ink2);font-size:13px;font-weight:500;transition:all .15s;border-left:3px solid transparent}
+.nav-item:hover{background:var(--accent-soft);color:var(--accent)}
+.nav-item.active{background:var(--accent-soft);color:var(--accent);border-left-color:var(--accent)}
+.nav-item svg{width:16px;height:16px;flex-shrink:0}
+.main{flex:1;padding:28px 32px;overflow-y:auto}
+.page-title{font-size:18px;font-weight:700;margin-bottom:20px}
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:16px;margin-bottom:28px}
+.card{background:var(--surface);border-radius:var(--radius);box-shadow:var(--shadow);padding:20px}
+.card-label{font-size:12px;color:var(--ink3);font-weight:500;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}
+.card-value{font-size:26px;font-weight:700}
+.card-sub{font-size:12px;color:var(--ink2);margin-top:4px}
+.table-wrap{background:var(--surface);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden}
+.table-head{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--line)}
+.table-head h3{font-size:14px;font-weight:600}
+table{width:100%;border-collapse:collapse}
+th{background:var(--bg);padding:10px 16px;text-align:left;font-size:11px;font-weight:600;color:var(--ink3);text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid var(--line)}
+td{padding:10px 16px;border-bottom:1px solid var(--line);font-size:13px;vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:var(--bg)}
+.badge{display:inline-flex;align-items:center;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:600}
+.badge-green{background:var(--green-soft);color:var(--green)}
+.badge-red{background:var(--red-soft);color:var(--red)}
+.badge-amber{background:var(--amber-soft);color:var(--amber)}
+.badge-blue{background:var(--accent-soft);color:var(--accent)}
+.mono{font-family:'SF Mono',Monaco,Consolas,monospace;font-size:12px}
+.text-muted{color:var(--ink3)}
+.text-right{text-align:right}
+.actions{display:flex;gap:6px}
+.empty{text-align:center;padding:40px;color:var(--ink3)}
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center;z-index:100}
+.modal{background:var(--surface);border-radius:14px;box-shadow:0 20px 60px rgba(0,0,0,.2);width:100%;max-width:480px;max-height:85vh;overflow-y:auto}
+.modal-head{display:flex;align-items:center;justify-content:space-between;padding:20px 24px 0}
+.modal-head h3{font-size:16px;font-weight:700}
+.modal-body{padding:20px 24px 24px}
+.form-group{margin-bottom:16px}
+.form-group label{display:block;font-size:13px;font-weight:600;margin-bottom:6px;color:var(--ink2)}
+.form-group input,.form-group select{width:100%;padding:9px 12px;border:1px solid var(--line);border-radius:8px;font-size:13px;outline:none}
+.form-group input:focus,.form-group select:focus{border-color:var(--accent)}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.alert{padding:12px 16px;border-radius:8px;font-size:13px;margin-bottom:16px}
+.alert-error{background:var(--red-soft);color:var(--red);border:1px solid #fecaca}
+.alert-success{background:var(--green-soft);color:var(--green);border:1px solid #bbf7d0}
+.alert-info{background:var(--accent-soft);color:var(--accent);border:1px solid #bfdbfe}
+.toast{position:fixed;bottom:24px;right:24px;background:var(--ink);color:#fff;padding:12px 20px;border-radius:10px;font-size:13px;font-weight:500;box-shadow:0 8px 24px rgba(0,0,0,.2);z-index:200;animation:fadeIn .2s}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.reveal-box{background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:12px;font-family:monospace;font-size:13px;word-break:break-all;margin-bottom:12px}
+.quota-bar{height:6px;background:var(--line);border-radius:3px;overflow:hidden;margin-top:4px}
+.quota-bar-fill{height:100%;border-radius:3px;background:var(--accent);transition:width .3s}
+.quota-bar-fill.warn{background:var(--amber)}
+.quota-bar-fill.full{background:var(--red)}
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script>
+const $ = s => document.querySelector(s);
+const $$ = s => document.querySelectorAll(s);
+const esc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+const fmtMicro = n => (n/1000000).toFixed(2) + ' cr';
+const fmtDate = ts => new Date(ts).toLocaleString('vi-VN',{day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit'});
+
+let mgmtKey = sessionStorage.getItem('mkp_key') || '';
+let currentPage = 'dashboard';
+
+// API helpers
+const RESOURCE_BASE = '/v0/resource/plugins/manager-key-pro';
+const MGMT_BASE = '/v0/management/plugins/manager-key-pro';
+
+async function apiGet(path) {
+  const r = await fetch(RESOURCE_BASE + path);
+  if (!r.ok) throw new Error(`GET ${path}: ${r.status}`);
+  return r.json();
+}
+async function apiPost(path, body) {
+  const r = await fetch(MGMT_BASE + path, {
+    method:'POST', headers:{'Authorization':'Bearer '+mgmtKey,'Content-Type':'application/json'},
+    body: JSON.stringify(body)
+  });
+  return r.json();
+}
+async function apiPatch(path, body) {
+  const r = await fetch(MGMT_BASE + path, {
+    method:'PATCH', headers:{'Authorization':'Bearer '+mgmtKey,'Content-Type':'application/json'},
+    body: JSON.stringify(body)
+  });
+  return r.json();
+}
+async function apiDelete(path) {
+  const r = await fetch(MGMT_BASE + path, {
+    method:'DELETE', headers:{'Authorization':'Bearer '+mgmtKey}
+  });
+  return r.json();
+}
+
+function toast(msg, isErr) {
+  const el = document.createElement('div');
+  el.className = 'toast';
+  el.style.background = isErr ? 'var(--red)' : 'var(--ink)';
+  el.textContent = msg;
+  document.body.appendChild(el);
+  setTimeout(()=>el.remove(), 3000);
+}
+
+function showModal(html) {
+  const ov = document.createElement('div');
+  ov.className = 'modal-overlay';
+  ov.innerHTML = `<div class="modal">${html}</div>`;
+  ov.addEventListener('click', e => { if(e.target===ov) ov.remove(); });
+  document.body.appendChild(ov);
+  return ov;
+}
+
+// ---- PAGES ----
+
+async function renderDashboard() {
+  const [stats] = await Promise.all([apiGet('/stats')]);
+  return `
+  <div class="page-title">Tổng quan</div>
+  <div class="cards">
+    <div class="card"><div class="card-label">Key hoạt động</div><div class="card-value">${stats.active_keys}</div></div>
+    <div class="card"><div class="card-label">Người dùng</div><div class="card-value">${stats.total_users}</div></div>
+    <div class="card"><div class="card-label">Tổng request</div><div class="card-value">${stats.total_requests}</div></div>
+    <div class="card"><div class="card-label">Tổng chi phí</div><div class="card-value">${fmtMicro(stats.total_cost_micro)}</div></div>
+  </div>`;
+}
+
+async function renderKeys() {
+  const data = await apiGet('/keys');
+  const keys = data.keys || [];
+  const rows = keys.map(k => {
+    const used = k.quota_used, total = k.quota_amount;
+    const pct = total > 0 ? Math.min(100, used/total*100) : 0;
+    const barCls = pct >= 90 ? 'full' : pct >= 70 ? 'warn' : '';
+    const statusBadge = k.status==='active' ? '<span class="badge badge-green">active</span>' :
+      k.status==='expired' ? '<span class="badge badge-red">expired</span>' :
+      `<span class="badge badge-amber">${esc(k.status)}</span>`;
+    return `<tr>
+      <td><span class="mono">${esc(k.prefix)}</span><br><span class="text-muted" style="font-size:11px">${esc(k.name)}</span></td>
+      <td><span class="badge badge-blue">${esc(k.quota_kind)}/${esc(k.quota_scope)}</span></td>
+      <td>
+        <span class="mono">${used} / ${total}</span>
+        <div class="quota-bar"><div class="quota-bar-fill ${barCls}" style="width:${pct}%"></div></div>
+      </td>
+      <td>${statusBadge}</td>
+      <td>${k.overflow_to_wallet ? '<span class="badge badge-green">bật</span>' : '<span class="badge badge-amber">tắt</span>'}</td>
+      <td class="actions">
+        <button class="btn btn-secondary btn-sm" onclick="revealKey('${k.id}')">Xem key</button>
+        <button class="btn btn-secondary btn-sm" onclick="renewKey('${k.id}')">Gia hạn</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteKey('${k.id}')">Xóa</button>
+      </td>
+    </tr>`;
+  }).join('');
+  return `
+  <div class="page-title">Quản lý Key</div>
+  <div style="margin-bottom:16px"><button class="btn btn-primary" onclick="showCreateKey()">+ Tạo key mới</button></div>
+  <div class="table-wrap">
+    <table><thead><tr><th>Key</th><th>Quota</th><th>Đã dùng</th><th>Trạng thái</th><th>Overflow</th><th></th></tr></thead>
+    <tbody>${rows || '<tr><td colspan="6" class="empty">Chưa có key nào</td></tr>'}</tbody></table>
+  </div>`;
+}
+
+async function renderUsers() {
+  const data = await apiGet('/users');
+  const users = data.users || [];
+  const rows = users.map(u => `<tr>
+    <td><strong>${esc(u.username)}</strong><br><span class="text-muted" style="font-size:11px">${esc(u.id)}</span></td>
+    <td>${esc(u.role)}</td>
+    <td>${u.status==='active' ? '<span class="badge badge-green">active</span>' : `<span class="badge badge-amber">${esc(u.status)}</span>`}</td>
+    <td class="mono">${fmtMicro(u.balance)}</td>
+    <td><span class="mono">${esc(u.referral_code)}</span></td>
+    <td class="actions">
+      <button class="btn btn-secondary btn-sm" onclick="rechargeUser('${u.id}','${esc(u.username)}')">Nạp ví</button>
+    </td>
+  </tr>`).join('');
+  return `
+  <div class="page-title">Người dùng</div>
+  <div style="margin-bottom:16px"><button class="btn btn-primary" onclick="showCreateUser()">+ Tạo user</button></div>
+  <div class="table-wrap">
+    <table><thead><tr><th>Username</th><th>Role</th><th>Trạng thái</th><th>Số dư</th><th>Referral</th><th></th></tr></thead>
+    <tbody>${rows || '<tr><td colspan="6" class="empty">Chưa có user nào</td></tr>'}</tbody></table>
+  </div>`;
+}
+
+async function renderUsage() {
+  const data = await apiGet('/usage');
+  const usage = data.usage || [];
+  const rows = usage.map(u => `<tr>
+    <td class="mono" style="font-size:11px">${esc(u.id)}</td>
+    <td><span class="mono" style="font-size:11px">${esc(u.key_id).slice(0,12)}…</span></td>
+    <td>${esc(u.provider)} / ${esc(u.model)}</td>
+    <td class="mono">${u.input_tokens} in / ${u.output_tokens} out</td>
+    <td class="mono">${fmtMicro(u.cost)}</td>
+    <td>${u.source==='key_quota' ? '<span class="badge badge-blue">key</span>' : u.source==='wallet' ? '<span class="badge badge-green">ví</span>' : '<span class="badge badge-amber">—</span>'}</td>
+    <td>${u.billed ? '<span class="badge badge-green">✓</span>' : '<span class="badge badge-amber">skip</span>'}</td>
+    <td class="text-muted" style="font-size:11px">${fmtDate(u.created_at)}</td>
+  </tr>`).join('');
+  return `
+  <div class="page-title">Lịch sử sử dụng</div>
+  <div class="table-wrap">
+    <table><thead><tr><th>ID</th><th>Key</th><th>Model</th><th>Tokens</th><th>Chi phí</th><th>Nguồn</th><th>Billed</th><th>Thời gian</th></tr></thead>
+    <tbody>${rows || '<tr><td colspan="8" class="empty">Chưa có dữ liệu</td></tr>'}</tbody></table>
+  </div>`;
+}
+
+// ---- ACTIONS ----
+
+function showCreateKey() {
+  showModal(`
+  <div class="modal-head"><h3>Tạo key mới</h3><button class="btn btn-secondary btn-sm" onclick="this.closest('.modal-overlay').remove()">✕</button></div>
+  <div class="modal-body">
+    <div class="form-group"><label>User ID</label><input id="ck-user" placeholder="usr_..."></div>
+    <div class="form-group"><label>Tên key</label><input id="ck-name" placeholder="Gói Pro"></div>
+    <div class="form-row">
+      <div class="form-group"><label>Loại quota</label><select id="ck-kind"><option value="token">token</option><option value="credit">credit</option><option value="request">request</option></select></div>
+      <div class="form-group"><label>Số lượng</label><input id="ck-amount" type="number" value="10000"></div>
+    </div>
+    <button class="btn btn-primary btn-block" onclick="doCreateKey()">Tạo key</button>
+  </div>`);
+}
+async function doCreateKey() {
+  try {
+    const r = await apiPost('/keys', {
+      user_id: $('#ck-user').value,
+      name: $('#ck-name').value,
+      quota_kind: $('#ck-kind').value,
+      quota_amount: parseInt($('#ck-amount').value) || 0
+    });
+    if (r.error) throw new Error(r.error);
+    $('.modal-overlay').remove();
+    toast('Tạo key thành công: ' + (r.plain_key||'').slice(0,16)+'…');
+    navigate('keys');
+  } catch(e) { toast('Lỗi: '+e.message, true); }
+}
+
+async function revealKey(id) {
+  try {
+    const r = await apiPost('/keys/'+id+'/reveal', {});
+    if (r.error) throw new Error(r.error);
+    showModal(`
+    <div class="modal-head"><h3>Plain Key</h3><button class="btn btn-secondary btn-sm" onclick="this.closest('.modal-overlay').remove()">✕</button></div>
+    <div class="modal-body">
+      <div class="alert alert-info">Key này chỉ hiển thị ở đây. Lưu lại ngay.</div>
+      <div class="reveal-box">${esc(r.plain_key)}</div>
+      <button class="btn btn-primary btn-block" onclick="navigator.clipboard.writeText('${esc(r.plain_key)}').then(()=>toast('Đã copy'))">Copy key</button>
+    </div>`);
+  } catch(e) { toast('Lỗi: '+e.message, true); }
+}
+
+function renewKey(id) {
+  showModal(`
+  <div class="modal-head"><h3>Gia hạn key</h3><button class="btn btn-secondary btn-sm" onclick="this.closest('.modal-overlay').remove()">✕</button></div>
+  <div class="modal-body">
+    <div class="form-group"><label>Thêm quota (token)</label><input id="rk-quota" type="number" value="0"></div>
+    <div class="form-group"><label>Gia hạn thêm (ngày)</label><input id="rk-days" type="number" value="0"></div>
+    <button class="btn btn-primary btn-block" onclick="doRenew('${id}')">Gia hạn</button>
+  </div>`);
+}
+async function doRenew(id) {
+  try {
+    const r = await apiPost('/keys/'+id+'/renew', {
+      add_quota: parseInt($('#rk-quota').value)||0,
+      extend_days: parseInt($('#rk-days').value)||0
+    });
+    if (r.error) throw new Error(r.error);
+    $('.modal-overlay').remove();
+    toast('Gia hạn thành công');
+    navigate('keys');
+  } catch(e) { toast('Lỗi: '+e.message, true); }
+}
+
+async function deleteKey(id) {
+  if (!confirm('Xóa key này?')) return;
+  try {
+    const r = await apiDelete('/keys/'+id);
+    if (r.error) throw new Error(r.error);
+    toast('Đã xóa');
+    navigate('keys');
+  } catch(e) { toast('Lỗi: '+e.message, true); }
+}
+
+function showCreateUser() {
+  showModal(`
+  <div class="modal-head"><h3>Tạo user mới</h3><button class="btn btn-secondary btn-sm" onclick="this.closest('.modal-overlay').remove()">✕</button></div>
+  <div class="modal-body">
+    <div class="form-group"><label>Username</label><input id="cu-user" placeholder="username"></div>
+    <div class="form-group"><label>Mật khẩu</label><input id="cu-pass" type="password" placeholder="••••••••"></div>
+    <button class="btn btn-primary btn-block" onclick="doCreateUser()">Tạo user</button>
+  </div>`);
+}
+async function doCreateUser() {
+  try {
+    const r = await apiPost('/users', {username:$('#cu-user').value, password:$('#cu-pass').value});
+    if (r.error) throw new Error(r.error);
+    $('.modal-overlay').remove();
+    toast('Tạo user thành công: '+r.id);
+    navigate('users');
+  } catch(e) { toast('Lỗi: '+e.message, true); }
+}
+
+function rechargeUser(id, name) {
+  showModal(`
+  <div class="modal-head"><h3>Nạp ví: ${name}</h3><button class="btn btn-secondary btn-sm" onclick="this.closest('.modal-overlay').remove()">✕</button></div>
+  <div class="modal-body">
+    <div class="form-group"><label>Số micro-credit (10 USD = 10000000)</label><input id="rc-amount" type="number" value="10000000"></div>
+    <button class="btn btn-primary btn-block" onclick="doRecharge('${id}')">Nạp</button>
+  </div>`);
+}
+async function doRecharge(id) {
+  try {
+    const r = await apiPost('/users/'+id+'/recharge', {amount: parseInt($('#rc-amount').value)||0});
+    if (r.error) throw new Error(r.error);
+    $('.modal-overlay').remove();
+    toast('Nạp thành công. Số dư mới: '+fmtMicro(r.balance_after));
+    navigate('users');
+  } catch(e) { toast('Lỗi: '+e.message, true); }
+}
+
+// ---- NAVIGATION ----
+
+const PAGES = {
+  dashboard: {label:'Tổng quan', icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg>'},
+  keys: {label:'Keys', icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>'},
+  users: {label:'Người dùng', icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>'},
+  usage: {label:'Lịch sử', icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>'},
+};
+
+async function navigate(page) {
+  currentPage = page;
+  $$('.nav-item').forEach(el => el.classList.toggle('active', el.dataset.page===page));
+  const content = $('#page-content');
+  content.innerHTML = '<div class="empty">Đang tải…</div>';
+  try {
+    let html = '';
+    if (page==='dashboard') html = await renderDashboard();
+    else if (page==='keys') html = await renderKeys();
+    else if (page==='users') html = await renderUsers();
+    else if (page==='usage') html = await renderUsage();
+    content.innerHTML = html;
+  } catch(e) {
+    content.innerHTML = `<div class="alert alert-error">Lỗi tải dữ liệu: ${esc(e.message)}</div>`;
+  }
+}
+
+function renderApp() {
+  const navItems = Object.entries(PAGES).map(([id, p]) =>
+    `<div class="nav-item ${id===currentPage?'active':''}" data-page="${id}" onclick="navigate('${id}')">${p.icon}${p.label}</div>`
+  ).join('');
+  document.getElementById('root').innerHTML = `
+  <div class="app">
+    <div class="sidebar">
+      <div class="sidebar-brand"><h2>Manager Key Pro</h2><p>Admin Dashboard</p></div>
+      ${navItems}
+      <div style="padding:12px 20px;border-top:1px solid var(--line);margin-top:12px">
+        <button class="btn btn-secondary btn-sm btn-block" onclick="logout()">Đăng xuất</button>
+      </div>
+    </div>
+    <div class="main"><div id="page-content"></div></div>
+  </div>`;
+  navigate(currentPage);
+}
+
+function logout() {
+  sessionStorage.removeItem('mkp_key');
+  mgmtKey = '';
+  showLogin();
+}
+
+function showLogin() {
+  document.getElementById('root').innerHTML = `
+  <div class="login-wrap">
+    <div class="login-card">
+      <h1>Manager Key Pro</h1>
+      <p>Nhập Management Key của CPA để truy cập admin dashboard.</p>
+      <div id="login-err"></div>
+      <input id="login-key" type="password" placeholder="Management Key" onkeydown="if(event.key==='Enter')doLogin()">
+      <button class="btn btn-primary btn-block" onclick="doLogin()">Đăng nhập</button>
+    </div>
+  </div>`;
+  setTimeout(()=>$('#login-key')?.focus(), 100);
+}
+
+async function doLogin() {
+  const key = $('#login-key').value.trim();
+  if (!key) return;
+  // Test the key by calling a management endpoint
+  try {
+    const r = await fetch(MGMT_BASE + '/stats', {headers:{'Authorization':'Bearer '+key}});
+    if (r.status === 401 || r.status === 403) {
+      $('#login-err').innerHTML = '<div class="alert alert-error">Management key không đúng.</div>';
+      return;
+    }
+    mgmtKey = key;
+    sessionStorage.setItem('mkp_key', key);
+    renderApp();
+  } catch(e) {
+    $('#login-err').innerHTML = `<div class="alert alert-error">Lỗi kết nối: ${esc(e.message)}</div>`;
+  }
+}
+
+// Init
+if (mgmtKey) renderApp(); else showLogin();
+</script>
+</body>
+</html>

@@ -15,28 +15,30 @@ import (
 // /v0/management/plugins/manager-key-pro/.
 func managementRegister() ([]byte, error) {
 	reg := map[string]any{
+		// Data routes are management-authenticated; the SPA authenticates itself
+		// with the CPA management key (the iframe cannot inherit panel session).
 		"Routes": []map[string]string{
-			// GET routes carry Menu so CPA also exposes them under
-			// /v0/resource/plugins/manager-key-pro/ (browser-navigable, no
-			// management key) for the admin dashboard to read.
-			{"Method": "GET", "Path": "/keys", "Menu": "Manager Key Pro"},
+			{"Method": "GET", "Path": "/keys"},
 			{"Method": "POST", "Path": "/keys"},
-			{"Method": "GET", "Path": "/keys/:id", "Menu": "Manager Key Pro"},
+			{"Method": "GET", "Path": "/keys/:id"},
 			{"Method": "PATCH", "Path": "/keys/:id"},
 			{"Method": "DELETE", "Path": "/keys/:id"},
-			{"Method": "GET", "Path": "/keys/:id/reveal", "Menu": "Manager Key Pro"},
+			{"Method": "POST", "Path": "/keys/:id/reveal"},
 			{"Method": "POST", "Path": "/keys/:id/renew"},
 			{"Method": "PATCH", "Path": "/keys/:id/quota"},
-			{"Method": "GET", "Path": "/users", "Menu": "Manager Key Pro"},
+			{"Method": "GET", "Path": "/users"},
 			{"Method": "POST", "Path": "/users"},
-			{"Method": "GET", "Path": "/users/:id", "Menu": "Manager Key Pro"},
+			{"Method": "GET", "Path": "/users/:id"},
 			{"Method": "PATCH", "Path": "/users/:id"},
 			{"Method": "POST", "Path": "/users/:id/recharge"},
-			{"Method": "GET", "Path": "/users/:id/ledger", "Menu": "Manager Key Pro"},
-			{"Method": "GET", "Path": "/usage", "Menu": "Manager Key Pro"},
-			{"Method": "GET", "Path": "/stats", "Menu": "Manager Key Pro"},
+			{"Method": "GET", "Path": "/users/:id/ledger"},
+			{"Method": "GET", "Path": "/usage"},
+			{"Method": "GET", "Path": "/stats"},
 		},
-		"Resources": []map[string]string{},
+		// Single UI resource -> one sidebar menu item, not a menu per route.
+		"Resources": []map[string]string{
+			{"Path": "/index.html", "Menu": "Manager Key Pro", "Description": "Admin dashboard"},
+		},
 	}
 	raw, errMarshal := json.Marshal(reg)
 	if errMarshal != nil {
@@ -66,6 +68,19 @@ func handleManagement(payload []byte) ([]byte, error) {
 	var req managementRequest
 	if errUnmarshal := json.Unmarshal(payload, &req); errUnmarshal != nil {
 		return mgmtJSON(http.StatusBadRequest, map[string]string{"error": "invalid request"})
+	}
+	// Serve the embedded admin UI (resource route /index.html).
+	if ui, errUI := serveAdminUI(req.Path); errUI == nil && ui != nil {
+		resp := managementResponse{
+			StatusCode: 200,
+			Headers:    map[string][]string{"Content-Type": {"text/html; charset=utf-8"}},
+			Body:       ui,
+		}
+		out, errOut := json.Marshal(resp)
+		if errOut != nil {
+			return nil, fmt.Errorf("marshal ui: %w", errOut)
+		}
+		return okEnvelopeJSON(string(out))
 	}
 	// Strip the plugin prefix CPA may include.
 	// Note: resource routes arrive as /v0/resource/plugins/<id>/<path>, management
