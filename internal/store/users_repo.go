@@ -27,6 +27,7 @@ const (
 	ReasonOverflow      = "overflow"
 	ReasonReferralBonus = "referral_bonus"
 	ReasonAdjust        = "adjust"
+	ReasonHold          = "hold"
 )
 
 // User mirrors one row of the users table. Wallet lives here, not on the key.

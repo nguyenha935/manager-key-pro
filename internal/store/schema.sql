@@ -141,7 +141,7 @@ CREATE TABLE IF NOT EXISTS credit_ledger (
     channel       TEXT,                                       -- dashboard|telegram|portal|system
     balance_after INTEGER NOT NULL,
     created_at    INTEGER NOT NULL,
-    CHECK (reason IN ('recharge','usage','purchase','renew','refund','overflow','referral_bonus','adjust'))
+    CHECK (reason IN ('recharge','usage','purchase','renew','refund','overflow','referral_bonus','adjust','hold'))
 );
 CREATE INDEX IF NOT EXISTS idx_ledger_user ON credit_ledger(user_id, created_at);
 CREATE UNIQUE INDEX IF NOT EXISTS idx_ledger_tx ON credit_ledger(ref_id)
@@ -256,6 +256,12 @@ CREATE TABLE IF NOT EXISTS audit_log (
 );
 CREATE INDEX IF NOT EXISTS idx_audit_time ON audit_log(created_at);
 CREATE INDEX IF NOT EXISTS idx_audit_key ON audit_log(key_id, created_at);
+
+-- Runtime-adjustable settings (fx, referral mode, log mode, backup).
+CREATE TABLE IF NOT EXISTS settings (
+    key   TEXT PRIMARY KEY,
+    value TEXT NOT NULL
+);
 
 -- Single-row table tracking the applied schema version.
 CREATE TABLE IF NOT EXISTS schema_meta (

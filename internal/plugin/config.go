@@ -12,19 +12,20 @@ import (
 // pluginConfig mirrors the YAML under plugins.configs.manager-key-pro.
 // CPA merges enabled/priority automatically; the rest is plugin-owned.
 type pluginConfig struct {
-	Enabled          bool   `yaml:"enabled"`
-	Priority         int    `yaml:"priority"`
-	DBPath           string `yaml:"db_path"`
-	EncryptionKey    string `yaml:"encryption_key"` // hex, or "env:NAME" to read from env
-	LogMode          string `yaml:"log_mode"`       // full|standard|error_only
-	PortalListen     string `yaml:"portal_listen"`  // e.g. 127.0.0.1:8788
-	PortalBaseURL    string `yaml:"portal_base_url"`
-	TelegramBotToken string `yaml:"telegram_bot_token"`
-	RegistrationOpen bool   `yaml:"registration_open"`
-	RequireApproval  bool   `yaml:"require_approval"`
-	MinPasswordLen   int    `yaml:"min_password_len"`
-	LoginLockAfter   int    `yaml:"login_lock_after"`
-	SessionTTLDays   int    `yaml:"session_ttl_days"`
+	Enabled               bool   `yaml:"enabled"`
+	Priority              int    `yaml:"priority"`
+	DBPath                string `yaml:"db_path"`
+	EncryptionKey         string `yaml:"encryption_key"` // hex, or "env:NAME" to read from env
+	LogMode               string `yaml:"log_mode"`       // full|standard|error_only
+	PortalListen          string `yaml:"portal_listen"`  // e.g. 127.0.0.1:8788
+	PortalBaseURL         string `yaml:"portal_base_url"`
+	TelegramBotToken      string `yaml:"telegram_bot_token"`
+	TelegramWebhookSecret string `yaml:"telegram_webhook_secret"`
+	RegistrationOpen      bool   `yaml:"registration_open"`
+	RequireApproval       bool   `yaml:"require_approval"`
+	MinPasswordLen        int    `yaml:"min_password_len"`
+	LoginLockAfter        int    `yaml:"login_lock_after"`
+	SessionTTLDays        int    `yaml:"session_ttl_days"`
 }
 
 // parseConfigYAML decodes the raw YAML delivered by CPA in plugin.register.

@@ -8,103 +8,61 @@ import (
 	"github.com/nguyenha935/manager-key-pro/internal/store"
 )
 
-// Price holds per-model micro-credit pricing. Values are micro-credit per token
-// (i.e. per-token cost scaled by 1e6).
+// Price holds per-model pricing in micro-credit PER MILLION TOKENS. The DB's
+// pricing table stores the same units, so no conversion is needed on load.
+// PerCallCredit is an optional flat micro-credit charge per call (used for hold).
 type Price struct {
-	Model              string
-	InputPerToken      int64   `json:"input_per_token"`
-	OutputPerToken     int64   `json:"output_per_token"`
-	ReasoningPerToken  int64   `json:"reasoning_per_token"`
-	CacheReadPerToken  int64   `json:"cache_read_per_token"`
-	CacheWritePerToken int64   `json:"cache_write_per_token"`
-	HoldMultiplier     float64 `json:"hold_multiplier"`
+	Model             string
+	InputPerMtok      int64   `json:"input_per_mtok"`
+	OutputPerMtok     int64   `json:"output_per_mtok"`
+	ReasoningPerMtok  int64   `json:"reasoning_per_mtok"`
+	CacheReadPerMtok  int64   `json:"cache_read_per_mtok"`
+	CacheWritePerMtok int64   `json:"cache_write_per_mtok"`
+	PerCallCredit     int64   `json:"per_call_credit"`
+	HoldMultiplier    float64 `json:"hold_multiplier"`
 }
 
-// DefaultPrices returns a sensible default pricing table in micro-credit per token.
-// These are approximate values for Anthropic models at ~1 USD = 1 credit.
+// DefaultPrices returns sensible defaults in micro-credit per million tokens.
+// 1 USD = 1,000,000 micro-credit.
 func DefaultPrices() map[string]Price {
-	// 1 USD = 1,000,000 micro-credit
-	// Claude Sonnet 5:  input $3/M  = 3/1_000_000 USD/token = 3_000_000 micro/M = 3 micro/token
-	//                   output $15/M = 15 micro/token
 	return map[string]Price{
-		"claude-sonnet-5": {
-			Model:              "claude-sonnet-5",
-			InputPerToken:      3,
-			OutputPerToken:     15,
-			ReasoningPerToken:  15,
-			CacheReadPerToken:  1, // ~10% of input for Anthropic cache reads (rounded)
-			CacheWritePerToken: 4, // ~125% of input for cache writes (rounded)
-			HoldMultiplier:     1.5,
-		},
-		"claude-opus-5": {
-			Model:              "claude-opus-5",
-			InputPerToken:      15,
-			OutputPerToken:     75,
-			ReasoningPerToken:  75,
-			CacheReadPerToken:  2,
-			CacheWritePerToken: 19,
-			HoldMultiplier:     1.5,
-		},
-		"claude-haiku-5": {
-			Model:              "claude-haiku-5",
-			InputPerToken:      1,
-			OutputPerToken:     4,
-			ReasoningPerToken:  4,
-			CacheReadPerToken:  1,
-			CacheWritePerToken: 1,
-			HoldMultiplier:     1.5,
-		},
+		"claude-sonnet-5": {Model: "claude-sonnet-5", InputPerMtok: 3_000_000, OutputPerMtok: 15_000_000, ReasoningPerMtok: 15_000_000, CacheReadPerMtok: 1_000_000, CacheWritePerMtok: 4_000_000, HoldMultiplier: 1.5},
+		"claude-opus-5":   {Model: "claude-opus-5", InputPerMtok: 15_000_000, OutputPerMtok: 75_000_000, ReasoningPerMtok: 75_000_000, CacheReadPerMtok: 2_000_000, CacheWritePerMtok: 19_000_000, HoldMultiplier: 1.5},
+		"claude-haiku-5":  {Model: "claude-haiku-5", InputPerMtok: 1_000_000, OutputPerMtok: 4_000_000, ReasoningPerMtok: 4_000_000, CacheReadPerMtok: 1_000_000, CacheWritePerMtok: 1_000_000, HoldMultiplier: 1.5},
 	}
 }
 
-// LoadPrice looks up the price for a model. Falls back to DefaultPrices when the
-// DB pricing table is empty.
+// LoadPrice looks up the price for a model from the pricing table, falling back
+// to defaults. Returns micro-credit per million tokens (no pre-division).
 func LoadPrice(db *store.DB, model string) (Price, error) {
-	// First try the pricing table.
 	var p Price
 	errQuery := db.SQL().QueryRow(`
 		SELECT model, input_per_mtok, output_per_mtok, reasoning_per_mtok,
-			cache_read_per_mtok, cache_write_per_mtok, hold_multiplier
+			cache_read_per_mtok, cache_write_per_mtok, COALESCE(per_call_credit,0), hold_multiplier
 		FROM pricing WHERE model = ?`, model).
-		Scan(&p.Model, &p.InputPerToken, &p.OutputPerToken, &p.ReasoningPerToken,
-			&p.CacheReadPerToken, &p.CacheWritePerToken, &p.HoldMultiplier)
+		Scan(&p.Model, &p.InputPerMtok, &p.OutputPerMtok, &p.ReasoningPerMtok,
+			&p.CacheReadPerMtok, &p.CacheWritePerMtok, &p.PerCallCredit, &p.HoldMultiplier)
 	if errQuery == nil {
-		// pricing table stores per-Mtok; convert to per-token.
-		p.InputPerToken = p.InputPerToken / 1000000
-		p.OutputPerToken = p.OutputPerToken / 1000000
-		p.ReasoningPerToken = p.ReasoningPerToken / 1000000
-		p.CacheReadPerToken = p.CacheReadPerToken / 1000000
-		p.CacheWritePerToken = p.CacheWritePerToken / 1000000
 		return p, nil
 	}
 
-	// Fall back to defaults.
 	defaults := DefaultPrices()
 	if dp, ok := defaults[model]; ok {
 		return dp, nil
 	}
-
-	// Fallback: look for any model that starts with the same family.
+	// Fallback: any model sharing the family prefix.
 	family := strings.Split(model, "-")[0]
 	for key, dp := range defaults {
 		if strings.HasPrefix(key, family) {
 			return dp, nil
 		}
 	}
-
-	// Absolute fallback: use sonnet pricing.
-	return Price{
-		Model:          model,
-		InputPerToken:  3,
-		OutputPerToken: 15,
-		HoldMultiplier: 1.5,
-	}, nil
+	// Absolute fallback: sonnet pricing.
+	return Price{Model: model, InputPerMtok: 3_000_000, OutputPerMtok: 15_000_000, HoldMultiplier: 1.5}, nil
 }
 
-// ComputeCost calculates the micro-credit cost for a usage record given the price.
-// It applies cache-aware billing:
-//   - Anthropic: cache tokens are ADDITIVE (not included in input_tokens).
-//   - OpenAI/Gemini: cache tokens are SUBSET (already included in input_tokens).
+// ComputeCost calculates the micro-credit cost for a usage record. Prices are
+// micro-credit per million tokens, so cost = tokens * rate / 1_000_000.
 func ComputeCost(rec UsageRecord, price Price) int64 {
 	input := rec.Detail.InputTokens
 	output := rec.Detail.OutputTokens
@@ -112,32 +70,25 @@ func ComputeCost(rec UsageRecord, price Price) int64 {
 	cacheRead := rec.Detail.CacheReadTokens
 	cacheWrite := rec.Detail.CacheCreationTokens
 
-	// Determine if this provider uses additive cache accounting.
-	// Anthropic: cache tokens are separate from input_tokens.
-	// OpenAI/Gemini: cache tokens are already included in input_tokens.
-	isAdditive := isCacheAdditive(rec.Provider)
-
-	if isAdditive {
-		// Anthropic: cache_read and cache_write are on top of input.
-		cost := input*price.InputPerToken +
-			output*price.OutputPerToken +
-			reasoning*price.ReasoningPerToken +
-			cacheRead*price.CacheReadPerToken +
-			cacheWrite*price.CacheWritePerToken
-		return cost
+	var micro int64
+	if isCacheAdditive(rec.Provider) {
+		// Anthropic: cache tokens are additive on top of input.
+		micro = input*price.InputPerMtok +
+			output*price.OutputPerMtok +
+			reasoning*price.ReasoningPerMtok +
+			cacheRead*price.CacheReadPerMtok +
+			cacheWrite*price.CacheWritePerMtok
+	} else {
+		// Subset providers (OpenAI/Gemini): cache tokens already counted in input.
+		micro = input*price.InputPerMtok +
+			output*price.OutputPerMtok +
+			reasoning*price.ReasoningPerMtok
 	}
-
-	// Subset providers (OpenAI, Gemini): cache tokens already in input.
-	// Only add reasoning on top of input.
-	cost := input*price.InputPerToken +
-		output*price.OutputPerToken +
-		reasoning*price.ReasoningPerToken
-	return cost
+	return micro / 1_000_000
 }
 
-// isCacheAdditive reports whether cache tokens are added on top of input_tokens.
-// Anthropic: cache_read_tokens and cache_creation_tokens are separate.
-// OpenAI/Gemini: cached tokens are included in input_tokens.
+// isCacheAdditive reports whether cache tokens are additive (Anthropic) or a
+// subset of input (OpenAI/Gemini).
 func isCacheAdditive(provider string) bool {
 	provider = strings.ToLower(provider)
 	return provider == "anthropic" || provider == "claude"
@@ -152,23 +103,57 @@ func SeedPricing(db *store.DB) error {
 	if count > 0 {
 		return nil
 	}
-	defaults := DefaultPrices()
-	for _, p := range defaults {
-		// Convert per-token to per-Mtok for storage.
-		inputMtok := p.InputPerToken * 1000000
-		outputMtok := p.OutputPerToken * 1000000
-		reasoningMtok := p.ReasoningPerToken * 1000000
-		cacheReadMtok := int64(p.CacheReadPerToken * 1000000)
-		cacheWriteMtok := int64(p.CacheWritePerToken * 1000000)
+	for _, p := range DefaultPrices() {
 		if _, errExec := db.SQL().Exec(`
 			INSERT INTO pricing (model, input_per_mtok, output_per_mtok, reasoning_per_mtok,
 				cache_read_per_mtok, cache_write_per_mtok, hold_multiplier, updated_at)
 			VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-			p.Model, inputMtok, outputMtok, reasoningMtok,
-			cacheReadMtok, cacheWriteMtok, p.HoldMultiplier, store.Now()); errExec != nil {
+			p.Model, p.InputPerMtok, p.OutputPerMtok, p.ReasoningPerMtok,
+			p.CacheReadPerMtok, p.CacheWritePerMtok, p.HoldMultiplier, store.Now()); errExec != nil {
 			return fmt.Errorf("seed pricing %s: %w", p.Model, errExec)
 		}
 		log.Printf("[mkp] seeded pricing for %s", p.Model)
 	}
 	return nil
+}
+
+// UpdatePrice upserts one model's pricing row (admin management route).
+func UpdatePrice(db *store.DB, p Price) error {
+	_, err := db.SQL().Exec(`
+		INSERT INTO pricing (model, input_per_mtok, output_per_mtok, reasoning_per_mtok,
+			cache_read_per_mtok, cache_write_per_mtok, per_call_credit, hold_multiplier, updated_at)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+		ON CONFLICT(model) DO UPDATE SET
+			input_per_mtok=excluded.input_per_mtok, output_per_mtok=excluded.output_per_mtok,
+			reasoning_per_mtok=excluded.reasoning_per_mtok, cache_read_per_mtok=excluded.cache_read_per_mtok,
+			cache_write_per_mtok=excluded.cache_write_per_mtok, per_call_credit=excluded.per_call_credit,
+			hold_multiplier=excluded.hold_multiplier, updated_at=excluded.updated_at`,
+		p.Model, p.InputPerMtok, p.OutputPerMtok, p.ReasoningPerMtok,
+		p.CacheReadPerMtok, p.CacheWritePerMtok, p.PerCallCredit, p.HoldMultiplier, store.Now())
+	return err
+}
+
+// ListPrices returns all rows in the pricing table.
+func ListPrices(db *store.DB) ([]Price, error) {
+	rows, err := db.SQL().Query(`
+		SELECT model, input_per_mtok, output_per_mtok, reasoning_per_mtok,
+			cache_read_per_mtok, cache_write_per_mtok, COALESCE(per_call_credit,0), hold_multiplier
+		FROM pricing ORDER BY model`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []Price
+	for rows.Next() {
+		var p Price
+		if errScan := rows.Scan(&p.Model, &p.InputPerMtok, &p.OutputPerMtok, &p.ReasoningPerMtok,
+			&p.CacheReadPerMtok, &p.CacheWritePerMtok, &p.PerCallCredit, &p.HoldMultiplier); errScan != nil {
+			return nil, errScan
+		}
+		out = append(out, p)
+	}
+	if out == nil {
+		out = []Price{}
+	}
+	return out, rows.Err()
 }

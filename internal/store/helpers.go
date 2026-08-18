@@ -85,3 +85,6 @@ func decodeJSONList(raw string) []string {
 
 // IsNotFound reports whether err came from a missing row.
 func IsNotFound(err error) bool { return errors.Is(err, ErrNotFound) }
+
+// IsDuplicate reports whether err is a UNIQUE/PRIMARY KEY conflict.
+func IsDuplicate(err error) bool { return isUniqueViolation(err) }

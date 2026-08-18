@@ -203,6 +203,7 @@ func handleRegister(payload []byte) ([]byte, error) {
 			PortalListen:     cfg.PortalListen,
 			PortalBaseURL:    cfg.PortalBaseURL,
 			TelegramBotToken: cfg.TelegramBotToken,
+			WebhookSecret:    cfg.TelegramWebhookSecret,
 			RegistrationOpen: cfg.RegistrationOpen,
 			RequireApproval:  cfg.RequireApproval,
 			MinPasswordLen:   cfg.MinPasswordLen,
@@ -214,15 +215,10 @@ func handleRegister(payload []byte) ([]byte, error) {
 		}
 		log.Printf("[mkp] boot complete: db=%s log_mode=%s", cfg.DBPath, cfg.LogMode)
 	}
+	meta := registrationMetadata()
 	reg := map[string]any{
 		"schema_version": 1,
-		"metadata": map[string]any{
-			"Name":             "Manager Key Pro",
-			"Version":          "0.1.0",
-			"Author":           "nguyenha935",
-			"GitHubRepository": "https://github.com/nguyenha935/manager-key-pro",
-			"ConfigFields":     []any{},
-		},
+		"metadata":       meta,
 		"capabilities": map[string]any{
 			"frontend_auth_provider":   true,
 			"request_interceptor":      true,

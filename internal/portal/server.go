@@ -6,6 +6,7 @@ package portal
 import (
 	"crypto/rand"
 	"crypto/sha256"
+	_ "embed"
 	"encoding/hex"
 	"fmt"
 	"log"
@@ -18,6 +19,9 @@ import (
 	"golang.org/x/crypto/argon2"
 )
 
+//go:embed web_index.html
+var portalUIHTML string
+
 // Config bundles the portal runtime settings.
 type Config struct {
 	Listen           string // e.g. "127.0.0.1:8788"
@@ -28,6 +32,8 @@ type Config struct {
 	MinPasswordLen   int
 	LoginLockAfter   int
 	SessionTTLDays   int
+	SecretKey        []byte // AES-256 key for reveal; shared with plugin
+	WebhookSecret    string // shared secret for POST /webhook/recharge
 }
 
 // Server owns the listener, DB handle, and in-memory session map.
@@ -72,9 +78,21 @@ func (s *Server) Start() {
 	mux.HandleFunc("POST /auth/register", s.handleRegister)
 	mux.HandleFunc("POST /auth/login", s.handleLogin)
 	mux.HandleFunc("POST /auth/logout", s.handleLogout)
+	mux.HandleFunc("POST /auth/telegram", s.handleTelegramLogin)
+	mux.HandleFunc("GET /me", s.handleMe)
 	mux.HandleFunc("GET /me/keys", s.handleMyKeys)
+	mux.HandleFunc("POST /me/keys/reveal", s.handleMyKeyReveal)
+	mux.HandleFunc("POST /me/keys/update", s.handleMyKeyUpdate)
 	mux.HandleFunc("GET /me/wallet", s.handleMyWallet)
+	mux.HandleFunc("GET /me/usage", s.handleMyUsage)
 	mux.HandleFunc("GET /me/referrals", s.handleMyReferrals)
+	mux.HandleFunc("POST /me/link-telegram", s.handleLinkTelegram)
+	mux.HandleFunc("POST /me/set-password", s.handleSetPassword)
+	mux.HandleFunc("GET /me/packages", s.handlePublicPackages)
+	mux.HandleFunc("POST /me/orders", s.handleBuyPackage)
+	mux.HandleFunc("GET /me/orders", s.handleMyOrders)
+	mux.HandleFunc("POST /webhook/recharge", s.handleWebhookRecharge)
+	mux.HandleFunc("GET /", s.handleIndex)
 	mux.HandleFunc("GET /health", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte(`{"status":"ok","service":"manager-key-pro-portal"}`))

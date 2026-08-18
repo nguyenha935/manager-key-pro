@@ -70,6 +70,16 @@ func registrationMetadata() map[string]any {
 				"Type":        "integer",
 				"Description": "Số ngày session người dùng còn hiệu lực. Mặc định 14.",
 			},
+			{
+				"Name":        "telegram_bot_token",
+				"Type":        "string",
+				"Description": "Bot token Telegram Login Widget + webhook nạp ví. Để trống = tắt Telegram.",
+			},
+			{
+				"Name":        "telegram_webhook_secret",
+				"Type":        "string",
+				"Description": "Secret chung cho webhook nạp ví Telegram (header X-Webhook-Secret).",
+			},
 		},
 	}
 }

@@ -5,444 +5,1055 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Manager Key Pro</title>
 <style>
-:root{--bg:#f4f6f8;--surface:#fff;--ink:#1a2332;--ink2:#5a6b7d;--ink3:#9aa8b8;--line:#e2e8f0;--accent:#2563eb;--accent-soft:#eff6ff;--green:#16a34a;--green-soft:#f0fdf4;--red:#dc2626;--red-soft:#fef2f2;--amber:#d97706;--amber-soft:#fffbeb;--radius:10px;--shadow:0 1px 3px rgba(0,0,0,.08),0 4px 12px rgba(0,0,0,.06)}
+/* ===== Design tokens — đồng bộ panel CPA (warm grey, 3 theme) ===== */
+:root{
+  --bg-secondary:#faf9f5;--bg-primary:#f0eee8;--bg-tertiary:#e9e6df;--bg-hover:var(--bg-tertiary);
+  --bg-quinary:#f6f4ee;--bg-error-light:rgba(198,87,70,.1);
+  --floating-surface:#fffdf9;--floating-shadow:0 12px 26px rgba(0,0,0,.14);
+  --text-primary:#2d2a26;--text-secondary:#6d6760;--text-tertiary:#a29c95;--text-quaternary:#c0bab3;
+  --border-color:#e3e1db;--border-primary:#d5d2cb;--border-hover:#cecac4;
+  --primary-color:#8b8680;--primary-hover:#7f7a74;--primary-active:#726d67;--primary-contrast:#fff;
+  --success-color:#10b981;--quota-medium-color:#e0aa14;--warning-color:#c65746;--error-color:#c65746;--danger-color:var(--error-color);
+  --warning-bg:rgba(198,87,70,.12);--warning-border:rgba(198,87,70,.35);
+  --success-badge-bg:#d1fae5;--success-badge-text:#065f46;--success-badge-border:#6ee7b7;
+  --failure-badge-bg:rgba(198,87,70,.14);--failure-badge-text:#8a3a30;--failure-badge-border:rgba(198,87,70,.35);
+  --count-badge-bg:rgba(139,134,128,.18);--count-badge-text:var(--primary-active);
+  --shadow:0 1px 2px 0 rgb(0 0 0/.08);--shadow-lg:0 10px 18px -3px rgb(0 0 0/.1);
+  --radius-md:8px;
+  --primary-8:color-mix(in srgb,var(--primary-color) 8%,transparent);
+  --primary-10:color-mix(in srgb,var(--primary-color) 10%,transparent);
+  --primary-30:color-mix(in srgb,var(--primary-color) 30%,transparent);
+  --amber-color:#d97706;--amber-text:#92400e;
+  --amber-10:color-mix(in srgb,var(--amber-color) 10%,transparent);
+  --amber-30:color-mix(in srgb,var(--amber-color) 30%,transparent);
+  --destructive-color:var(--error-color);
+  --destructive-10:color-mix(in srgb,var(--destructive-color) 10%,transparent);
+  --muted-bg:var(--bg-tertiary);--muted-foreground:var(--text-secondary);--accent-bg:var(--bg-tertiary);
+  --glass-blur:12px;--glass-backdrop-filter:blur(var(--glass-blur));
+  --glass-bg:color-mix(in srgb,var(--bg-primary) 82%,transparent);
+  --glass-bg-secondary:color-mix(in srgb,var(--bg-secondary) 82%,transparent);
+  --glass-border:color-mix(in srgb,var(--border-color) 60%,transparent);
+  --viz-success:#10b981;--viz-failure:#c65746;
+  --ease-out-strong:cubic-bezier(.23,1,.32,1);--dur-press:160ms;--dur-hover:200ms;
+  --font-body:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',sans-serif;
+  --font-mono:ui-monospace,'SF Mono','Cascadia Mono','JetBrains Mono',Menlo,Consolas,monospace;
+}
+html[data-theme='white']{
+  --bg-secondary:#ffffff;--bg-primary:#ffffff;--bg-tertiary:#f6f6f6;--bg-hover:var(--bg-tertiary);
+  --bg-quinary:#ffffff;--bg-error-light:rgba(198,87,70,.08);
+  --floating-surface:#ffffff;--floating-shadow:0 12px 26px rgba(0,0,0,.12);
+  --border-color:#e5e5e5;--border-primary:#d9d9d9;--border-hover:#cccccc;
+  --glass-bg:color-mix(in srgb,var(--bg-primary) 82%,transparent);
+  --glass-bg-secondary:color-mix(in srgb,var(--bg-secondary) 82%,transparent);
+  --glass-border:color-mix(in srgb,var(--border-color) 60%,transparent);
+}
+html[data-theme='dark']{
+  --bg-secondary:#151412;--bg-primary:#1d1b18;--bg-tertiary:#262320;--bg-hover:#2e2a26;
+  --bg-quinary:#191714;--bg-error-light:rgba(198,87,70,.18);
+  --floating-surface:#2a2723;--floating-shadow:0 14px 30px rgba(0,0,0,.4);
+  --text-primary:#f6f4f1;--text-secondary:#c9c3bb;--text-tertiary:#9c958d;--text-quaternary:#6f6962;
+  --border-color:#3a3530;--border-primary:#4a453f;--border-hover:#5a544d;
+  --primary-hover:#9a948e;--primary-active:#a6a099;
+  --quota-medium-color:#ffd862;
+  --warning-bg:rgba(198,87,70,.22);--warning-border:rgba(198,87,70,.45);
+  --warning-text:#f1b0a6;
+  --success-badge-bg:rgba(6,78,59,.3);--success-badge-text:#6ee7b7;--success-badge-border:#059669;
+  --failure-badge-bg:rgba(198,87,70,.24);--failure-badge-text:#f1b0a6;--failure-badge-border:rgba(198,87,70,.5);
+  --count-badge-bg:rgba(139,134,128,.28);--count-badge-text:var(--primary-active);
+  --shadow:0 1px 3px 0 rgb(0 0 0/.3);--shadow-lg:0 10px 15px -3px rgb(0 0 0/.3);
+  --amber-color:#f59e0b;--amber-text:#fcd34d;
+  --amber-10:color-mix(in srgb,var(--amber-color) 14%,transparent);
+  --amber-30:color-mix(in srgb,var(--amber-color) 38%,transparent);
+  --destructive-10:color-mix(in srgb,var(--destructive-color) 14%,transparent);
+  --glass-border:color-mix(in srgb,var(--border-color) 55%,transparent);
+  --viz-success:#0fae78;--viz-failure:#cf4b3a;
+}
+@media (max-width:768px),(prefers-reduced-motion:reduce),(prefers-reduced-transparency:reduce){
+  :root{--glass-backdrop-filter:none;--glass-bg:var(--bg-primary);--glass-bg-secondary:var(--bg-secondary);--glass-border:var(--border-color)}
+}
+
 *{box-sizing:border-box;margin:0;padding:0}
-body{background:var(--bg);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;font-size:14px;line-height:1.5}
-a{color:var(--accent);text-decoration:none}
-.login-wrap{display:flex;align-items:center;justify-content:center;min-height:100vh;padding:20px}
-.login-card{background:var(--surface);border-radius:16px;box-shadow:var(--shadow);padding:40px;width:100%;max-width:400px}
-.login-card h1{font-size:20px;font-weight:700;margin-bottom:6px}
-.login-card p{color:var(--ink2);font-size:13px;margin-bottom:24px}
-.login-card input{width:100%;padding:10px 14px;border:1px solid var(--line);border-radius:8px;font-size:14px;margin-bottom:16px;outline:none}
-.login-card input:focus{border-color:var(--accent)}
-.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;border:none;transition:background .15s}
-.btn-primary{background:var(--accent);color:#fff}.btn-primary:hover{background:#1d4ed8}
-.btn-secondary{background:var(--surface);color:var(--ink);border:1px solid var(--line)}.btn-secondary:hover{background:var(--bg)}
-.btn-danger{background:var(--red);color:#fff}.btn-danger:hover{background:#b91c1c}
-.btn-sm{padding:5px 12px;font-size:12px}
-.btn-block{width:100%;justify-content:center}
-.app{display:flex;min-height:100vh}
-.sidebar{width:220px;background:var(--surface);border-right:1px solid var(--line);padding:20px 0;flex-shrink:0}
-.sidebar-brand{padding:0 20px 20px;border-bottom:1px solid var(--line);margin-bottom:12px}
-.sidebar-brand h2{font-size:15px;font-weight:700;color:var(--accent)}
-.sidebar-brand p{font-size:11px;color:var(--ink3);margin-top:2px}
-.nav-item{display:flex;align-items:center;gap:10px;padding:10px 20px;cursor:pointer;color:var(--ink2);font-size:13px;font-weight:500;transition:all .15s;border-left:3px solid transparent}
-.nav-item:hover{background:var(--accent-soft);color:var(--accent)}
-.nav-item.active{background:var(--accent-soft);color:var(--accent);border-left-color:var(--accent)}
-.nav-item svg{width:16px;height:16px;flex-shrink:0}
-.main{flex:1;padding:28px 32px;overflow-y:auto}
-.page-title{font-size:18px;font-weight:700;margin-bottom:20px}
-.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:16px;margin-bottom:28px}
-.card{background:var(--surface);border-radius:var(--radius);box-shadow:var(--shadow);padding:20px}
-.card-label{font-size:12px;color:var(--ink3);font-weight:500;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px}
-.card-value{font-size:26px;font-weight:700}
-.card-sub{font-size:12px;color:var(--ink2);margin-top:4px}
-.table-wrap{background:var(--surface);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden}
-.table-head{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid var(--line)}
-.table-head h3{font-size:14px;font-weight:600}
-table{width:100%;border-collapse:collapse}
-th{background:var(--bg);padding:10px 16px;text-align:left;font-size:11px;font-weight:600;color:var(--ink3);text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid var(--line)}
-td{padding:10px 16px;border-bottom:1px solid var(--line);font-size:13px;vertical-align:middle}
-tr:last-child td{border-bottom:none}
-tr:hover td{background:var(--bg)}
-.badge{display:inline-flex;align-items:center;padding:2px 8px;border-radius:20px;font-size:11px;font-weight:600}
-.badge-green{background:var(--green-soft);color:var(--green)}
-.badge-red{background:var(--red-soft);color:var(--red)}
-.badge-amber{background:var(--amber-soft);color:var(--amber)}
-.badge-blue{background:var(--accent-soft);color:var(--accent)}
-.mono{font-family:'SF Mono',Monaco,Consolas,monospace;font-size:12px}
-.text-muted{color:var(--ink3)}
-.text-right{text-align:right}
-.actions{display:flex;gap:6px}
-.empty{text-align:center;padding:40px;color:var(--ink3)}
-.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center;z-index:100}
-.modal{background:var(--surface);border-radius:14px;box-shadow:0 20px 60px rgba(0,0,0,.2);width:100%;max-width:480px;max-height:85vh;overflow-y:auto}
-.modal-head{display:flex;align-items:center;justify-content:space-between;padding:20px 24px 0}
-.modal-head h3{font-size:16px;font-weight:700}
-.modal-body{padding:20px 24px 24px}
-.form-group{margin-bottom:16px}
-.form-group label{display:block;font-size:13px;font-weight:600;margin-bottom:6px;color:var(--ink2)}
-.form-group input,.form-group select{width:100%;padding:9px 12px;border:1px solid var(--line);border-radius:8px;font-size:13px;outline:none}
-.form-group input:focus,.form-group select:focus{border-color:var(--accent)}
+html,body{height:100%}
+body{background:var(--bg-secondary);color:var(--text-primary);font:14px/1.5 var(--font-body);-webkit-font-smoothing:antialiased}
+a{color:var(--primary-active);text-decoration:none}
+::-webkit-scrollbar{width:8px;height:8px}
+::-webkit-scrollbar-track{background:var(--bg-secondary)}
+::-webkit-scrollbar-thumb{background:var(--border-color);border-radius:99px}
+::-webkit-scrollbar-thumb:hover{background:var(--border-hover)}
+
+/* ===== Components ===== */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:1px solid transparent;border-radius:var(--radius-md);padding:10px 14px;font:600 14px var(--font-body);cursor:pointer;transition:all 150ms ease;background:var(--bg-secondary);color:var(--text-primary);white-space:nowrap}
+.btn:active{transform:scale(.97)}
+.btn:disabled{opacity:.6;cursor:not-allowed}
+.btn-primary{background:var(--primary-color);color:var(--primary-contrast);border-color:var(--primary-color)}
+.btn-primary:hover{background:var(--primary-hover);border-color:var(--primary-hover)}
+.btn-secondary{background:var(--bg-tertiary);border-color:var(--border-color);color:var(--text-primary)}
+.btn-secondary:hover{background:var(--bg-hover);border-color:var(--border-hover)}
+.btn-ghost{background:transparent;border-color:transparent;color:var(--text-secondary)}
+.btn-ghost:hover{color:var(--text-primary);background:var(--bg-tertiary)}
+.btn-danger{background:var(--error-color);border-color:var(--error-color);color:#fff}
+.btn-danger:hover{filter:brightness(.92)}
+.btn-sm{padding:7px 10px;font-size:13px;border-radius:6px}
+.btn-block{width:100%}
+.btn svg{width:15px;height:15px}
+
+input,select,textarea{width:100%;border:1px solid var(--border-color);border-radius:var(--radius-md);padding:10px 12px;background:var(--bg-secondary);color:var(--text-primary);font:14px var(--font-body);transition:border-color 150ms ease,box-shadow 150ms ease}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--primary-color);box-shadow:0 0 0 3px rgba(139,134,128,.18)}
+input::placeholder{color:var(--text-quaternary)}
+input[type=checkbox]{width:auto}
+label{font-weight:600;font-size:13px;color:var(--text-primary);display:block;margin-bottom:5px}
+.hint{color:var(--text-tertiary);font-size:12px;margin-top:4px}
+
+.badge{display:inline-flex;align-items:center;gap:5px;padding:2px 9px;border-radius:99px;font:600 11.5px var(--font-mono);letter-spacing:.02em;border:1px solid var(--border-color);color:var(--text-secondary)}
+.badge-success{background:var(--success-badge-bg);color:var(--success-badge-text);border-color:var(--success-badge-border)}
+.badge-error{background:var(--failure-badge-bg);color:var(--failure-badge-text);border-color:var(--failure-badge-border)}
+.badge-warn{background:var(--amber-10);color:var(--amber-text);border-color:var(--amber-30)}
+.badge-dot{width:6px;height:6px;border-radius:50%;background:currentColor}
+
+.mono{font-family:var(--font-mono);font-variant-numeric:tabular-nums}
+.muted{color:var(--text-tertiary)}
+
+.card{background:var(--bg-primary);border:1px solid var(--border-color);border-radius:12px;box-shadow:var(--shadow)}
+.card-pad{padding:24px}
+.card-head{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:16px 20px;border-bottom:1px solid var(--border-color)}
+.card-head h3{font-size:15px;font-weight:650;letter-spacing:-.01em}
+.card-head .sub{font-size:12px;color:var(--text-tertiary)}
+
+/* Tables — chuẩn CPA */
+.tbl-wrap{border:1px solid var(--border-color);border-radius:var(--radius-md);overflow:hidden;background:var(--bg-primary);box-shadow:var(--shadow)}
+.tbl-scroll{overflow-x:auto}
+table{width:100%;border-collapse:separate;border-spacing:0;font-size:13px;color:var(--text-primary)}
+thead{background:var(--muted-bg)}
+thead th{color:var(--muted-foreground);font-weight:500;font-size:12px;text-align:left;padding:10px 14px;border-bottom:1px solid var(--border-color);white-space:nowrap}
+tbody td{padding:12px 14px;border-bottom:1px solid var(--border-color);vertical-align:top}
+tbody tr{transition:background-color 150ms ease}
+tbody tr:hover td{background:color-mix(in srgb,var(--accent-bg) 50%,transparent)}
+tbody tr:last-child td{border-bottom:none}
+.tbl-empty{padding:36px;text-align:center;color:var(--text-tertiary);font-size:13px}
+.actions{display:flex;gap:6px;flex-wrap:wrap}
+
+/* Sidebar + shell */
+.shell{display:flex;min-height:100vh}
+.sidebar{width:232px;flex-shrink:0;background:var(--bg-primary);border-right:1px solid var(--border-color);padding:20px 12px;position:sticky;top:0;height:100vh;overflow-y:auto}
+.brand{display:flex;align-items:center;gap:10px;padding:4px 10px 18px;margin-bottom:14px;border-bottom:1px solid var(--border-color)}
+.brand-mark{width:34px;height:34px;border-radius:10px;background:var(--primary-10);border:1px solid var(--primary-30);display:flex;align-items:center;justify-content:center;color:var(--primary-active);flex-shrink:0}
+.brand-mark svg{width:18px;height:18px}
+.brand h1{font-size:14px;font-weight:700;letter-spacing:-.01em;line-height:1.2}
+.brand p{font:500 10.5px var(--font-mono);color:var(--text-tertiary);letter-spacing:.06em;margin-top:2px}
+.nav{display:flex;flex-direction:column;gap:2px}
+.nav-item{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:var(--radius-md);cursor:pointer;color:var(--text-secondary);font-size:13.5px;font-weight:500;transition:background 150ms ease,color 150ms ease;position:relative;border:none;background:none;text-align:left;width:100%;font-family:var(--font-body)}
+.nav-item svg{width:17px;height:17px;flex-shrink:0}
+.nav-item:hover{background:var(--bg-tertiary);color:var(--text-primary)}
+.nav-item.active{background:var(--primary-8);color:var(--primary-active);font-weight:600}
+.nav-item.active::before{content:'';position:absolute;left:-12px;top:8px;bottom:8px;width:3px;border-radius:0 3px 3px 0;background:var(--primary-color)}
+.side-foot{margin-top:auto;padding:14px 10px 4px;border-top:1px solid var(--border-color);font:500 11px var(--font-mono);color:var(--text-quaternary);letter-spacing:.03em;display:flex;align-items:center;gap:8px}
+.conn-dot{width:7px;height:7px;border-radius:50%;background:var(--viz-success);flex-shrink:0}
+.main{flex:1;min-width:0;padding:34px 36px 60px}
+
+/* Page container */
+.page{max-width:1120px;width:100%;margin:0 auto;display:flex;flex-direction:column;gap:36px}
+.page-head{display:flex;flex-direction:column;gap:6px}
+.eyebrow{display:inline-flex;align-items:center;gap:7px;font:700 11px var(--font-mono);letter-spacing:.12em;text-transform:uppercase;color:var(--text-tertiary)}
+.eyebrow::before{content:'▍';color:var(--viz-success);font-size:12px;line-height:1}
+.page-title{font-size:clamp(24px,3vw,32px);font-weight:650;letter-spacing:-.02em;line-height:1.15}
+.page-desc{font-size:14px;color:var(--text-secondary);max-width:64ch;line-height:1.6}
+.page-tools{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:6px}
+
+/* Dashboard hero */
+.hero{position:relative;display:grid;grid-template-columns:minmax(0,1.1fr) minmax(300px,.9fr);gap:clamp(24px,4vw,52px);align-items:center;padding:8px 0 26px}
+.ambient{position:absolute;inset:-20px -30px auto;height:420px;z-index:-1;pointer-events:none;overflow:hidden}
+.wash-top{position:absolute;top:0;left:50%;width:min(960px,96vw);height:380px;transform:translateX(-50%);background:radial-gradient(ellipse 75% 70% at 50% 18%,color-mix(in srgb,var(--viz-success) 10%,transparent),transparent 70%);mask-image:linear-gradient(to bottom,transparent,#000 26%,#000 62%,transparent);-webkit-mask-image:linear-gradient(to bottom,transparent,#000 26%,#000 62%,transparent)}
+.grid-wash{position:absolute;inset:0;background-image:linear-gradient(to right,var(--border-color) 1px,transparent 1px),linear-gradient(to bottom,var(--border-color) 1px,transparent 1px);background-size:72px 72px;opacity:.24;mask-image:linear-gradient(to bottom,transparent,#000 48px),radial-gradient(ellipse 70% 60% at 50% 0%,#000 0%,transparent 78%);-webkit-mask-image:linear-gradient(to bottom,transparent,#000 48px),radial-gradient(ellipse 70% 60% at 50% 0%,#000 0%,transparent 78%);mask-composite:intersect;-webkit-mask-composite:source-in}
+.hero-copy{display:flex;flex-direction:column;gap:14px;min-width:0}
+.hero-title{font-size:clamp(38px,5vw,58px);line-height:1.06;font-weight:700;letter-spacing:-.035em;text-wrap:balance}
+.hero-period{display:inline;margin-left:.1em;letter-spacing:0}
+.hero-period.live{animation:breath 3.2s ease-in-out 1.8s infinite}
+@keyframes breath{0%,100%{opacity:1}50%{opacity:.35}}
+.hero-meta{font:500 13px var(--font-mono);letter-spacing:.02em;color:var(--text-secondary);font-variant-numeric:tabular-nums}
+.hero-actions{display:flex;gap:12px;align-items:center;margin-top:4px;flex-wrap:wrap}
+.pill-action{display:inline-flex;align-items:center;gap:6px;padding:11px 20px;border-radius:99px;font-size:14px;font-weight:600;background:var(--text-primary);color:var(--bg-secondary);border:1px solid transparent;cursor:pointer;transition:transform var(--dur-press) var(--ease-out-strong),background var(--dur-hover) ease}
+.pill-action:hover{transform:translateY(-1px);background:color-mix(in srgb,var(--text-primary) 86%,var(--bg-secondary))}
+.pill-action:active{transform:scale(.97)}
+.ghost-link{display:inline-flex;align-items:center;gap:6px;padding:11px 8px;font-size:14px;font-weight:600;color:var(--text-secondary);background:none;border:none;cursor:pointer;font-family:var(--font-body)}
+.ghost-link:hover{color:var(--text-primary)}
+.ghost-link .arr{display:inline-block;transition:transform var(--dur-hover) var(--ease-out-strong)}
+.ghost-link:hover .arr{transform:translateX(3px)}
+
+.hero-panel{position:relative;display:flex;flex-direction:column;gap:8px;padding:clamp(20px,2.4vw,28px);border-radius:20px;border:1px solid var(--glass-border);background:linear-gradient(145deg,color-mix(in srgb,var(--bg-primary) 90%,transparent),color-mix(in srgb,var(--bg-secondary) 74%,transparent));backdrop-filter:var(--glass-backdrop-filter);-webkit-backdrop-filter:var(--glass-backdrop-filter);box-shadow:var(--shadow-lg)}
+.hero-panel-top{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.panel-label{font:700 11px var(--font-mono);letter-spacing:.12em;text-transform:uppercase;color:var(--text-tertiary)}
+.live-badge{display:inline-flex;align-items:center;gap:6px;padding:3px 9px;border-radius:99px;border:1px solid color-mix(in srgb,var(--viz-success) 35%,transparent);background:color-mix(in srgb,var(--viz-success) 8%,transparent);font:700 10px var(--font-mono);letter-spacing:.14em;text-transform:uppercase;color:var(--success-badge-text)}
+.live-dot{width:6px;height:6px;border-radius:50%;background:var(--viz-success);animation:ping 2s ease-out infinite}
+@keyframes ping{0%{box-shadow:0 0 0 0 color-mix(in srgb,var(--viz-success) 45%,transparent)}70%{box-shadow:0 0 0 6px transparent}100%{box-shadow:0 0 0 0 transparent}}
+.hero-figure{font:600 clamp(36px,4.5vw,54px)/1.05 var(--font-mono);letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.hero-panel-meta{font:500 12px var(--font-mono);color:var(--text-secondary)}
+.ratio-bar{display:flex;gap:2px;height:6px;margin-top:8px;border-radius:3px;overflow:hidden}
+.ratio-seg{min-width:4px;background:var(--viz-success)}
+.ratio-seg.fail{background:var(--viz-failure)}
+.hero-split{display:flex;flex-wrap:wrap;gap:14px;padding-top:10px;border-top:1px solid var(--border-color);font-size:12px;color:var(--text-secondary)}
+.hero-split b{font:600 12px var(--font-mono);color:var(--text-primary)}
+.swatch{width:8px;height:8px;border-radius:2px;display:inline-block;margin-right:5px}
+
+/* KPI tiles */
+.kpi-row{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px}
+.kpi{display:flex;flex-direction:column;gap:6px;padding:22px;border-radius:14px;border:1px solid var(--border-color);background:color-mix(in srgb,var(--bg-primary) 82%,transparent);transition:border-color 150ms ease}
+.kpi:hover{border-color:var(--border-hover)}
+.kpi::before{content:'';width:28px;height:3px;margin-bottom:2px;border-radius:99px;background:var(--tile-accent,var(--border-hover))}
+.kpi-label{font-size:12px;font-weight:600;color:var(--text-secondary)}
+.kpi-value{font:600 27px/1.1 var(--font-mono);letter-spacing:-.01em;font-variant-numeric:tabular-nums}
+.kpi-hint{font-size:12px;line-height:1.45;color:var(--text-tertiary)}
+.meter{height:5px;border-radius:99px;background:var(--bg-tertiary);overflow:hidden;margin:2px 0}
+.meter i{display:block;height:100%;border-radius:99px;background:var(--viz-success)}
+.meter i.warn{background:var(--quota-medium-color)}
+.meter i.bad{background:var(--viz-failure)}
+
+/* Sections */
+.section{display:flex;flex-direction:column;gap:18px}
+.section-head{display:flex;flex-direction:column;gap:6px}
+.section-title{font-size:clamp(19px,2.2vw,24px);font-weight:650;letter-spacing:-.02em}
+.section-desc{font-size:13.5px;color:var(--text-secondary);max-width:64ch}
+.panel{display:flex;flex-direction:column;gap:16px;padding:clamp(20px,2.2vw,26px);border-radius:16px;border:1px solid var(--border-color);background:color-mix(in srgb,var(--bg-primary) 82%,transparent)}
+.panel-title{font-size:16px;font-weight:650;letter-spacing:-.01em}
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.note{font-size:13px;color:var(--text-secondary);line-height:1.6}
+
+/* Form */
+.form-group{display:flex;flex-direction:column;margin-bottom:14px}
 .form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-.alert{padding:12px 16px;border-radius:8px;font-size:13px;margin-bottom:16px}
-.alert-error{background:var(--red-soft);color:var(--red);border:1px solid #fecaca}
-.alert-success{background:var(--green-soft);color:var(--green);border:1px solid #bbf7d0}
-.alert-info{background:var(--accent-soft);color:var(--accent);border:1px solid #bfdbfe}
-.toast{position:fixed;bottom:24px;right:24px;background:var(--ink);color:#fff;padding:12px 20px;border-radius:10px;font-size:13px;font-weight:500;box-shadow:0 8px 24px rgba(0,0,0,.2);z-index:200;animation:fadeIn .2s}
-@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
-.reveal-box{background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:12px;font-family:monospace;font-size:13px;word-break:break-all;margin-bottom:12px}
-.quota-bar{height:6px;background:var(--line);border-radius:3px;overflow:hidden;margin-top:4px}
-.quota-bar-fill{height:100%;border-radius:3px;background:var(--accent);transition:width .3s}
-.quota-bar-fill.warn{background:var(--amber)}
-.quota-bar-fill.full{background:var(--red)}
+.form-inline{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end}
+.form-inline .form-group{margin:0}
+.form-inline .form-group.grow{flex:1;min-width:150px}
+
+/* Tabs */
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--border-color);margin-bottom:20px;overflow-x:auto}
+.tab{padding:10px 16px;font-size:13.5px;font-weight:600;color:var(--text-tertiary);cursor:pointer;border:none;background:none;border-bottom:2px solid transparent;margin-bottom:-1px;white-space:nowrap;font-family:var(--font-body);transition:color 150ms ease}
+.tab:hover{color:var(--text-primary)}
+.tab.active{color:var(--primary-active);border-bottom-color:var(--primary-color)}
+
+/* Modal */
+.modal-overlay{position:fixed;inset:0;background:rgba(20,18,15,.45);display:flex;align-items:center;justify-content:center;z-index:1000;padding:20px;backdrop-filter:blur(3px)}
+.modal{background:var(--floating-surface);border-radius:16px;box-shadow:var(--floating-shadow);width:100%;max-width:520px;max-height:88vh;overflow-y:auto;border:1px solid var(--border-color)}
+.modal-lg{max-width:720px}
+.modal-head{display:flex;align-items:center;justify-content:space-between;padding:18px 22px;border-bottom:1px solid var(--border-color);position:sticky;top:0;background:var(--floating-surface)}
+.modal-head h3{font-size:16px;font-weight:650}
+.modal-body{padding:22px}
+.close-x{width:30px;height:30px;border-radius:8px;display:flex;align-items:center;justify-content:center;background:none;border:none;color:var(--text-tertiary);cursor:pointer}
+.close-x:hover{background:var(--bg-tertiary);color:var(--text-primary)}
+
+/* Reveal key box */
+.reveal-box{font:13px/1.6 var(--font-mono);background:var(--bg-quinary);border:1px dashed var(--border-hover);border-radius:10px;padding:14px 16px;word-break:break-all;margin:14px 0;color:var(--text-primary)}
+
+/* Toast */
+.toast{position:fixed;top:20px;right:20px;z-index:2000;background:var(--floating-surface);color:var(--text-primary);border:1px solid var(--border-color);border-radius:10px;padding:11px 18px;font-size:13.5px;font-weight:500;box-shadow:var(--floating-shadow);animation:toastIn .25s var(--ease-out-strong);display:flex;gap:8px;align-items:center}
+.toast.err{border-color:var(--warning-border);background:var(--warning-bg);color:var(--text-primary)}
+@keyframes toastIn{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:none}}
+
+/* Login */
+.login-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;background:var(--bg-secondary)}
+.login-card{background:var(--bg-primary);border:1px solid var(--border-color);border-radius:20px;box-shadow:var(--shadow-lg);padding:40px;width:100%;max-width:400px}
+.login-card .brand{border:none;padding:0 0 22px;margin:0}
+.login-card h2{font-size:18px;font-weight:700;margin-bottom:4px}
+.login-card>p{color:var(--text-secondary);font-size:13px;margin-bottom:22px}
+
+/* Skeleton loading */
+.skel{border-radius:8px;background:linear-gradient(90deg,var(--bg-tertiary) 25%,var(--bg-quinary) 50%,var(--bg-tertiary) 75%);background-size:200% 100%;animation:skel 1.4s infinite}
+@keyframes skel{from{background-position:200% 0}to{background-position:-200% 0}}
+
+@media (max-width:960px){
+  .kpi-row{grid-template-columns:repeat(2,1fr)}
+  .hero{grid-template-columns:1fr}
+  .grid-2{grid-template-columns:1fr}
+}
+@media (max-width:768px){
+  .sidebar{width:64px;padding:20px 8px}
+  .brand h1,.brand p,.nav-item span.lbl,.side-foot span{display:none}
+  .nav-item{justify-content:center;padding:10px}
+  .nav-item.active::before{display:none}
+  .main{padding:24px 18px 60px}
+  .form-row{grid-template-columns:1fr}
+}
+@media (max-width:520px){.kpi-row{grid-template-columns:1fr}}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation:none!important;transition:none!important}
+}
 </style>
 </head>
 <body>
 <div id="root"></div>
 <script>
-const $ = s => document.querySelector(s);
+'use strict';
+/* ===== helpers ===== */
+const $  = s => document.querySelector(s);
 const $$ = s => document.querySelectorAll(s);
-const esc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-const fmtMicro = n => (n/1000000).toFixed(2) + ' cr';
-const fmtDate = ts => new Date(ts).toLocaleString('vi-VN',{day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit'});
+const esc = s => String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+const fmtInt = n => (n||0).toLocaleString('vi-VN');
+const fmtMicro = n => ((n||0)/1e6).toLocaleString('vi-VN',{minimumFractionDigits:2,maximumFractionDigits:2}) + ' cr';
+const fmtDate = ts => ts ? new Date(ts).toLocaleString('vi-VN',{day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit'}) : '∞';
+const fmtShortDate = ts => ts ? new Date(ts).toLocaleDateString('vi-VN',{day:'2-digit',month:'2-digit'}) + ' ' + new Date(ts).toLocaleTimeString('vi-VN',{hour:'2-digit',minute:'2-digit'}) : '—';
 
-let mgmtKey = sessionStorage.getItem('mkp_key') || '';
+let mgmtKey = sessionStorage.getItem('mkp_key') || localStorage.getItem('mkp_admin_key') || '';
 let currentPage = 'dashboard';
-
-// API helpers
+let sysTab = 'logs';
 const MGMT_BASE = '/v0/management/plugins/manager-key-pro';
 
-// Mirrors the panel's XOR obfuscation + zustand-persist envelope, exactly as
-// the official cpa-key-policy plugin does (see its web/src/store/panelAuth.ts).
+/* ===== theme sync với panel mẹ (iframe cùng origin) ===== */
+function applyTheme(t, fromParent){
+  if (t) document.documentElement.setAttribute('data-theme', t);
+  else document.documentElement.removeAttribute('data-theme');
+  if (!fromParent) { try{localStorage.setItem('mkp_theme', t||'');}catch(e){} }
+}
+function syncTheme(){
+  try {
+    const p = (window.parent && window.parent !== window) ? window.parent.document.documentElement : null;
+    if (p) {
+      applyTheme(p.getAttribute('data-theme')||'', true);
+      new MutationObserver(()=>applyTheme(p.getAttribute('data-theme')||'', true))
+        .observe(p, {attributes:true, attributeFilter:['data-theme']});
+      return;
+    }
+  } catch(e){}
+  applyTheme((localStorage.getItem('mkp_theme')||''), false);
+}
+
+/* ===== đọc management key panel CPA đã lưu ===== */
 const ENC_PREFIX = 'enc::v1::';
 const SECRET_SALT = 'cli-proxy-api-webui::secure-storage';
 const STORAGE_KEY = 'cli-proxy-auth';
 function _xorkey(){ return new TextEncoder().encode(SECRET_SALT+'|'+window.location.host+'|'+navigator.userAgent); }
-function _deobf(p){ if(!p||!p.startsWith(ENC_PREFIX)) return p; var b=atob(p.slice(ENC_PREFIX.length)), k=_xorkey(), s=''; for(var i=0;i<b.length;i++){ s+=String.fromCharCode(b.charCodeAt(i)^k[i%k.length]);} return s; }
+function _deobf(p){ if(!p||!p.startsWith(ENC_PREFIX)) return p; const b=atob(p.slice(ENC_PREFIX.length)), k=_xorkey(); let s=''; for(let i=0;i<b.length;i++){ s+=String.fromCharCode(b.charCodeAt(i)^k[i%k.length]);} return s; }
 function isEmbedded(){ try { return window.self !== window.top; } catch(e){ return false; } }
 function readPanelMgmtKey(){
   if (!isEmbedded()) return '';
-  var raw = null;
+  let raw = null;
   try { raw = localStorage.getItem(STORAGE_KEY); } catch(e){ return ''; }
   if (!raw) return '';
-  var dec = _deobf(raw);
   try {
-    var obj = JSON.parse(dec);
-    // zustand-persist envelope is { state: {...}, version }.
-    var state = (obj && obj.state) || obj;
+    const obj = JSON.parse(_deobf(raw));
+    const state = (obj && obj.state) || obj;
     if (state && typeof state.managementKey === 'string' && state.managementKey) return state.managementKey;
   } catch(e){}
   return '';
 }
 
-async function apiGet(path) {
-  const r = await fetch(MGMT_BASE + path, { headers:{'Authorization':'Bearer '+mgmtKey} });
-  if (!r.ok) throw new Error(`GET ${path}: ${r.status}`);
-  return r.json();
+/* ===== api ===== */
+async function api(method, path, body){
+  const opts = { method, headers:{'Authorization':'Bearer '+mgmtKey} };
+  if (body !== undefined){ opts.headers['Content-Type']='application/json'; opts.body = JSON.stringify(body); }
+  const r = await fetch(MGMT_BASE + path, opts);
+  let data = null;
+  try { data = await r.json(); } catch(e){}
+  if (!r.ok) throw new Error((data && data.error) || method+' '+path+': '+r.status);
+  return data;
 }
-async function apiPost(path, body) {
-  const r = await fetch(MGMT_BASE + path, {
-    method:'POST', headers:{'Authorization':'Bearer '+mgmtKey,'Content-Type':'application/json'},
-    body: JSON.stringify(body)
-  });
-  return r.json();
-}
-async function apiPatch(path, body) {
-  const r = await fetch(MGMT_BASE + path, {
-    method:'PATCH', headers:{'Authorization':'Bearer '+mgmtKey,'Content-Type':'application/json'},
-    body: JSON.stringify(body)
-  });
-  return r.json();
-}
-async function apiDelete(path) {
-  const r = await fetch(MGMT_BASE + path, {
-    method:'DELETE', headers:{'Authorization':'Bearer '+mgmtKey}
-  });
-  return r.json();
-}
+const apiGet  = p => api('GET', p);
+const apiPost = (p,b) => api('POST', p, b||{});
 
-function toast(msg, isErr) {
+function toast(msg, isErr){
   const el = document.createElement('div');
-  el.className = 'toast';
-  el.style.background = isErr ? 'var(--red)' : 'var(--ink)';
-  el.textContent = msg;
+  el.className = 'toast' + (isErr?' err':'');
+  el.innerHTML = (isErr
+    ? '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--viz-failure)" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>'
+    : '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--viz-success)" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>');
+  el.appendChild(document.createTextNode(msg));
   document.body.appendChild(el);
-  setTimeout(()=>el.remove(), 3000);
+  setTimeout(()=>el.remove(), 3200);
 }
-
-function showModal(html) {
+function showModal(html, large){
   const ov = document.createElement('div');
   ov.className = 'modal-overlay';
-  ov.innerHTML = `<div class="modal">${html}</div>`;
+  ov.innerHTML = '<div class="modal'+(large?' modal-lg':'')+'">'+html+'</div>';
   ov.addEventListener('click', e => { if(e.target===ov) ov.remove(); });
   document.body.appendChild(ov);
   return ov;
 }
+function closeModal(){ $('.modal-overlay')?.remove(); }
+const modalHead = t => '<div class="modal-head"><h3>'+t+'</h3><button class="close-x" onclick="closeModal()" aria-label="Đóng"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div>';
 
-// ---- PAGES ----
-
-async function renderDashboard() {
-  const [stats] = await Promise.all([apiGet('/stats')]);
-  return `
-  <div class="page-title">Tổng quan</div>
-  <div class="cards">
-    <div class="card"><div class="card-label">Key hoạt động</div><div class="card-value">${stats.active_keys}</div></div>
-    <div class="card"><div class="card-label">Người dùng</div><div class="card-value">${stats.total_users}</div></div>
-    <div class="card"><div class="card-label">Tổng request</div><div class="card-value">${stats.total_requests}</div></div>
-    <div class="card"><div class="card-label">Tổng chi phí</div><div class="card-value">${fmtMicro(stats.total_cost_micro)}</div></div>
-  </div>`;
+/* sparkline SVG từ mảng số */
+function sparkSVG(values, h, ok){
+  const w = 320;
+  if (!values.length) return '';
+  const max = Math.max(...values, 1);
+  const step = w / Math.max(values.length-1, 1);
+  const pts = values.map((v,i)=>[i*step, h - 6 - (v/max)*(h-14)]);
+  const line = pts.map((p,i)=>(i?'L':'M')+p[0].toFixed(1)+' '+p[1].toFixed(1)).join(' ');
+  const area = line + ' L '+w+' '+h+' L 0 '+h+' Z';
+  const last = pts[pts.length-1];
+  const col = ok ? 'var(--viz-success)' : 'var(--primary-color)';
+  return '<svg viewBox="0 0 '+w+' '+h+'" style="width:100%;height:'+h+'px;display:block" preserveAspectRatio="none">'
+    + '<path d="'+area+'" fill="'+col+'" opacity=".1"/>'
+    + '<path d="'+line+'" fill="none" stroke="'+col+'" stroke-width="1.8" vector-effect="non-scaling-stroke"/>'
+    + '<circle cx="'+last[0]+'" cy="'+last[1]+'" r="3" fill="'+col+'"/></svg>';
 }
 
-async function renderKeys() {
-  const data = await apiGet('/keys');
+/* ===== DASHBOARD ===== */
+async function renderDashboard(){
+  const [s, u, k] = await Promise.all([apiGet('/stats'), apiGet('/usage'), apiGet('/keys')]);
+  const usage = u.usage || [];
+  const keyTotal = (k.keys||[]).length;
+  const revenue = s.revenue_micro || 0;
+  const spent = s.total_cost_micro || 0;
+  const live = s.total_requests > 0;
+
+  let verdict, accent;
+  if (revenue > 0){ verdict = 'Doanh thu đang chảy'; accent = 'var(--viz-success)'; }
+  else if (s.total_requests > 0){ verdict = 'Hệ thống đang phục vụ'; accent = 'var(--viz-success)'; }
+  else if (s.total_users > 0){ verdict = 'Sẵn sàng bán hàng'; accent = 'var(--quota-medium-color)'; }
+  else { verdict = 'Bắt đầu từ đây'; accent = 'var(--text-quaternary)'; }
+
+  /* sparkline: nhóm usage theo giờ gần nhất */
+  const buckets = {};
+  usage.forEach(x => { const hr = Math.floor(x.created_at/3600000); buckets[hr] = (buckets[hr]||0)+1; });
+  const hrs = Object.keys(buckets).map(Number).sort((a,b)=>a-b).slice(-24);
+  const sparkVals = hrs.map(h=>buckets[h]);
+
+  const recent = usage.slice(0,8).map(x => '<tr>'
+    + '<td class="mono muted" style="font-size:11.5px">'+fmtShortDate(x.created_at)+'</td>'
+    + '<td>'+esc(x.requested_name || x.model || '—')+'</td>'
+    + '<td class="mono">'+fmtInt(x.input_tokens)+' / '+fmtInt(x.output_tokens)+'</td>'
+    + '<td class="mono">'+fmtMicro(x.cost)+'</td>'
+    + '<td>'+(x.billed ? '<span class="badge badge-success"><i class="badge-dot"></i>đã trừ</span>' : '<span class="badge">giữ chỗ</span>')+'</td>'
+    + '</tr>').join('');
+
+  const keyPct = null; /* placeholder */
+  return '<div class="page">'
+  + '<div class="hero"><div class="ambient" aria-hidden="true"><span class="wash-top"></span><span class="grid-wash"></span></div>'
+    + '<div class="hero-copy">'
+      + '<h1 class="hero-title">'+verdict+'<span class="hero-period'+(live?' live':'')+'" style="color:'+accent+'">.</span></h1>'
+      + '<p class="hero-meta">v0.2.0 · '+fmtInt(s.active_keys)+' keys hoạt động · '+fmtInt(s.total_users)+' người dùng</p>'
+      + '<div class="hero-actions">'
+        + '<button class="pill-action" onclick="navigate(\'keys\');showCreateKey()">Tạo key mới</button>'
+        + '<button class="ghost-link" onclick="navigate(\'system\')">Kiểm tra hệ thống <span class="arr">→</span></button>'
+      + '</div>'
+    + '</div>'
+    + '<div class="hero-panel">'
+      + '<div class="hero-panel-top"><span class="panel-label">Tổng nạp ví</span>'
+        + (live ? '<span class="live-badge"><i class="live-dot"></i>live</span>' : '<span class="badge">chờ dữ liệu</span>')
+      + '</div>'
+      + '<strong class="hero-figure">'+fmtMicro(revenue)+'</strong>'
+      + '<span class="hero-panel-meta">'+fmtInt(s.paid_orders)+' đơn đã trả · '+fmtInt(s.pending_users)+' user chờ duyệt</span>'
+      + '<div class="ratio-bar" aria-hidden="true">'
+        + '<span class="ratio-seg" style="flex:'+(revenue||1)+'"></span>'
+        + '<span class="ratio-seg fail" style="flex:'+(spent||1)+'"></span>'
+      + '</div>'
+      + '<div class="hero-split">'
+        + '<span><i class="swatch" style="background:var(--viz-success)"></i>Nạp vào <b>'+fmtMicro(revenue)+'</b></span>'
+        + '<span><i class="swatch" style="background:var(--viz-failure)"></i>Chi phí trừ <b>'+fmtMicro(spent)+'</b></span>'
+      + '</div>'
+    + '</div>'
+  + '</div>'
+
+  + '<div class="kpi-row">'
+    + '<div class="kpi" style="--tile-accent:var(--viz-success)"><span class="kpi-label">Key hoạt động</span><strong class="kpi-value">'+fmtInt(s.active_keys)+'</strong><span class="kpi-hint">trên tổng '+fmtInt(keyTotal)+' key đã tạo</span></div>'
+    + '<div class="kpi" style="--tile-accent:var(--primary-color)"><span class="kpi-label">Tổng request đã trừ</span><strong class="kpi-value">'+fmtInt(s.total_requests)+'</strong><span class="kpi-hint">ghi nhận qua usage hook</span></div>'
+    + '<div class="kpi" style="--tile-accent:var(--amber-color)"><span class="kpi-label">Chờ duyệt</span><strong class="kpi-value">'+fmtInt(s.pending_users)+'</strong><span class="kpi-hint">'+(s.pending_users>0?'cần xử lý trong mục Người dùng':'không có ai chờ')+'</span></div>'
+    + '<div class="kpi" style="--tile-accent:var(--viz-failure)"><span class="kpi-label">Chi phí đã trừ</span><strong class="kpi-value" style="font-size:22px">'+fmtMicro(spent)+'</strong><span class="kpi-hint">'+fmtInt(s.total_requests)+' request tính tiền</span></div>'
+  + '</div>'
+
+  + '<div class="section">'
+    + '<div class="section-head"><span class="eyebrow">Lưu lượng</span><h2 class="section-title">Request theo giờ</h2></div>'
+    + '<div class="grid-2">'
+      + '<div class="panel">'
+        + '<div class="panel-title">24 giờ gần nhất</div>'
+        + (sparkVals.length ? sparkSVG(sparkVals, 120, true) : '<p class="note tbl-empty">Chưa có request nào — sparkline sẽ hiện khi có traffic.</p>')
+      + '</div>'
+      + '<div class="panel">'
+        + '<div class="panel-title">Request mới nhất</div>'
+        + '<div class="tbl-wrap"><div class="tbl-scroll"><table>'
+        + '<thead><tr><th>Thời gian</th><th>Model</th><th>In / Out</th><th>Chi phí</th><th>Trạng thái</th></tr></thead>'
+        + '<tbody>'+(recent || '<tr><td colspan="5" class="tbl-empty">Chưa có dữ liệu</td></tr>')+'</tbody>'
+        + '</table></div></div>'
+      + '</div>'
+    + '</div>'
+  + '</div>'
+  + '</div>';
+}
+
+/* ===== KEYS ===== */
+let _usersCache = [];
+async function renderKeys(){
+  const [data, users, pkgs] = await Promise.all([apiGet('/keys'), apiGet('/users'), apiGet('/packages')]);
+  _usersCache = users.users||[];
   const keys = data.keys || [];
+  const uName = id => (_usersCache.find(u=>u.id===id)||{}).username || id.slice(0,12);
   const rows = keys.map(k => {
-    const used = k.quota_used, total = k.quota_amount;
-    const pct = total > 0 ? Math.min(100, used/total*100) : 0;
-    const barCls = pct >= 90 ? 'full' : pct >= 70 ? 'warn' : '';
-    const statusBadge = k.status==='active' ? '<span class="badge badge-green">active</span>' :
-      k.status==='expired' ? '<span class="badge badge-red">expired</span>' :
-      `<span class="badge badge-amber">${esc(k.status)}</span>`;
-    return `<tr>
-      <td><span class="mono">${esc(k.prefix)}</span><br><span class="text-muted" style="font-size:11px">${esc(k.name)}</span></td>
-      <td><span class="badge badge-blue">${esc(k.quota_kind)}/${esc(k.quota_scope)}</span></td>
-      <td>
-        <span class="mono">${used} / ${total}</span>
-        <div class="quota-bar"><div class="quota-bar-fill ${barCls}" style="width:${pct}%"></div></div>
-      </td>
-      <td>${statusBadge}</td>
-      <td>${k.overflow_to_wallet ? '<span class="badge badge-green">bật</span>' : '<span class="badge badge-amber">tắt</span>'}</td>
-      <td class="actions">
-        <button class="btn btn-secondary btn-sm" onclick="revealKey('${k.id}')">Xem key</button>
-        <button class="btn btn-secondary btn-sm" onclick="renewKey('${k.id}')">Gia hạn</button>
-        <button class="btn btn-danger btn-sm" onclick="deleteKey('${k.id}')">Xóa</button>
-      </td>
-    </tr>`;
+    const pct = k.quota_amount > 0 ? Math.min(100, k.quota_used/k.quota_amount*100) : 0;
+    const meterCls = pct >= 90 ? 'bad' : pct >= 70 ? 'warn' : '';
+    const badge = k.status==='active' ? '<span class="badge badge-success"><i class="badge-dot"></i>active</span>'
+      : k.status==='expired' ? '<span class="badge badge-error"><i class="badge-dot"></i>expired</span>'
+      : '<span class="badge badge-warn"><i class="badge-dot"></i>'+esc(k.status)+'</span>';
+    return '<tr>'
+      + '<td><span class="mono">'+esc(k.prefix)+'</span><div class="muted" style="font-size:11.5px;margin-top:2px">'+esc(k.name||'')+' · '+esc(uName(k.user_id))+'</div></td>'
+      + '<td><span class="badge">'+esc(k.quota_kind)+'/'+esc(k.quota_scope)+'</span></td>'
+      + '<td style="min-width:130px"><span class="mono" style="font-size:12px">'+fmtInt(k.quota_used)+' / '+fmtInt(k.quota_amount)+'</span><div class="meter"><i class="'+meterCls+'" style="width:'+pct+'%"></i></div></td>'
+      + '<td>'+badge+'<div class="muted" style="font-size:11.5px;margin-top:3px">hạn: '+(k.expires_at>0?fmtDate(k.expires_at):'∞')+'</div></td>'
+      + '<td>'+(k.overflow_to_wallet ? '<span class="badge badge-success">bật</span>' : '<span class="badge">tắt</span>')+'</td>'
+      + '<td><div class="actions">'
+        + '<button class="btn btn-secondary btn-sm" onclick="revealKey(\''+k.id+'\')">Xem</button>'
+        + '<button class="btn btn-secondary btn-sm" onclick="renewKey(\''+k.id+'\')">Gia hạn</button>'
+        + '<button class="btn btn-secondary btn-sm" onclick="switchQuota(\''+k.id+'\',\''+k.quota_kind+'\',\''+k.quota_scope+'\','+k.quota_amount+','+k.expires_at+')">Hạn mức</button>'
+        + '<button class="btn btn-danger btn-sm" onclick="deleteKey(\''+k.id+'\')">Xóa</button>'
+      + '</div></td>'
+    + '</tr>';
   }).join('');
-  return `
-  <div class="page-title">Quản lý Key</div>
-  <div style="margin-bottom:16px"><button class="btn btn-primary" onclick="showCreateKey()">+ Tạo key mới</button></div>
-  <div class="table-wrap">
-    <table><thead><tr><th>Key</th><th>Quota</th><th>Đã dùng</th><th>Trạng thái</th><th>Overflow</th><th></th></tr></thead>
-    <tbody>${rows || '<tr><td colspan="6" class="empty">Chưa có key nào</td></tr>'}</tbody></table>
-  </div>`;
+  window._keyUserOpts = _usersCache.map(u=>'<option value="'+u.id+'">'+esc(u.username)+'</option>').join('');
+  window._keyPkgOpts = (pkgs.packages||[]).map(p=>'<option value="'+p.id+'">'+esc(p.name)+' ('+fmtMicro(p.price_credit)+')</option>').join('');
+  return '<div class="page">'
+    + '<div class="page-head"><span class="eyebrow">Phát hành</span><h2 class="page-title">Quản lý Key</h2>'
+    + '<p class="page-desc">Mỗi key đúng một hạn mức tại một thời điểm. Key copy lại được bất cứ lúc nào; mỗi lần xem đều ghi audit.</p></div>'
+    + '<div class="page-tools"><button class="btn btn-primary" onclick="showCreateKey()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Tạo key mới</button>'
+    + '<span class="muted" style="font-size:12.5px">'+fmtInt(keys.length)+' key</span></div>'
+    + '<div class="tbl-wrap"><div class="tbl-scroll"><table>'
+    + '<thead><tr><th>Key</th><th>Quota</th><th>Đã dùng</th><th>Trạng thái</th><th>Overflow</th><th></th></tr></thead>'
+    + '<tbody>'+(rows || '<tr><td colspan="6" class="tbl-empty">Chưa có key nào — bấm “Tạo key mới” để bắt đầu.</td></tr>')+'</tbody>'
+    + '</table></div></div>'
+  + '</div>';
 }
-
-async function renderUsers() {
-  const data = await apiGet('/users');
-  const users = data.users || [];
-  const rows = users.map(u => `<tr>
-    <td><strong>${esc(u.username)}</strong><br><span class="text-muted" style="font-size:11px">${esc(u.id)}</span></td>
-    <td>${esc(u.role)}</td>
-    <td>${u.status==='active' ? '<span class="badge badge-green">active</span>' : `<span class="badge badge-amber">${esc(u.status)}</span>`}</td>
-    <td class="mono">${fmtMicro(u.balance)}</td>
-    <td><span class="mono">${esc(u.referral_code)}</span></td>
-    <td class="actions">
-      <button class="btn btn-secondary btn-sm" onclick="rechargeUser('${u.id}','${esc(u.username)}')">Nạp ví</button>
-    </td>
-  </tr>`).join('');
-  return `
-  <div class="page-title">Người dùng</div>
-  <div style="margin-bottom:16px"><button class="btn btn-primary" onclick="showCreateUser()">+ Tạo user</button></div>
-  <div class="table-wrap">
-    <table><thead><tr><th>Username</th><th>Role</th><th>Trạng thái</th><th>Số dư</th><th>Referral</th><th></th></tr></thead>
-    <tbody>${rows || '<tr><td colspan="6" class="empty">Chưa có user nào</td></tr>'}</tbody></table>
-  </div>`;
+function showCreateKey(){
+  showModal(modalHead('Tạo key mới')
+  + '<div class="modal-body">'
+    + '<div class="form-group"><label>User sở hữu</label><select id="ck-user"><option value="">— chọn user —</option>'+window._keyUserOpts+'</select></div>'
+    + '<div class="form-group"><label>Tên key</label><input id="ck-name" placeholder="VD: Gói Pro 30 ngày"></div>'
+    + '<div class="form-group"><label>Gói (chọn gói thì quota theo gói)</label><select id="ck-pkg"><option value="">— tự đặt quota —</option>'+window._keyPkgOpts+'</select></div>'
+    + '<div class="form-row">'
+      + '<div class="form-group"><label>Loại quota</label><select id="ck-kind"><option value="token">token</option><option value="credit">credit</option><option value="request">request</option><option value="unlimited">unlimited</option></select></div>'
+      + '<div class="form-group"><label>Phạm vi</label><select id="ck-scope"><option value="lifetime">lifetime</option><option value="hour">hour</option><option value="day">day</option><option value="week">week</option><option value="month">month</option></select></div>'
+    + '</div>'
+    + '<div class="form-row">'
+      + '<div class="form-group"><label>Số lượng</label><input id="ck-amount" type="number" value="100000"></div>'
+      + '<div class="form-group"><label>Số ngày hết hạn (0 = ∞)</label><input id="ck-days" type="number" value="0"></div>'
+    + '</div>'
+    + '<div class="form-group"><label style="display:flex;gap:8px;align-items:center;font-weight:500"><input type="checkbox" id="ck-overflow"> Cho tràn phần thừa sang ví user</label></div>'
+    + '<button class="btn btn-primary btn-block" onclick="doCreateKey()">Tạo key</button>'
+  + '</div>');
 }
-
-async function renderUsage() {
-  const data = await apiGet('/usage');
-  const usage = data.usage || [];
-  const rows = usage.map(u => `<tr>
-    <td class="mono" style="font-size:11px">${esc(u.id)}</td>
-    <td><span class="mono" style="font-size:11px">${esc(u.key_id).slice(0,12)}…</span></td>
-    <td>${esc(u.provider)} / ${esc(u.model)}</td>
-    <td class="mono">${u.input_tokens} in / ${u.output_tokens} out</td>
-    <td class="mono">${fmtMicro(u.cost)}</td>
-    <td>${u.source==='key_quota' ? '<span class="badge badge-blue">key</span>' : u.source==='wallet' ? '<span class="badge badge-green">ví</span>' : '<span class="badge badge-amber">—</span>'}</td>
-    <td>${u.billed ? '<span class="badge badge-green">✓</span>' : '<span class="badge badge-amber">skip</span>'}</td>
-    <td class="text-muted" style="font-size:11px">${fmtDate(u.created_at)}</td>
-  </tr>`).join('');
-  return `
-  <div class="page-title">Lịch sử sử dụng</div>
-  <div class="table-wrap">
-    <table><thead><tr><th>ID</th><th>Key</th><th>Model</th><th>Tokens</th><th>Chi phí</th><th>Nguồn</th><th>Billed</th><th>Thời gian</th></tr></thead>
-    <tbody>${rows || '<tr><td colspan="8" class="empty">Chưa có dữ liệu</td></tr>'}</tbody></table>
-  </div>`;
-}
-
-// ---- ACTIONS ----
-
-function showCreateKey() {
-  showModal(`
-  <div class="modal-head"><h3>Tạo key mới</h3><button class="btn btn-secondary btn-sm" onclick="this.closest('.modal-overlay').remove()">✕</button></div>
-  <div class="modal-body">
-    <div class="form-group"><label>User ID</label><input id="ck-user" placeholder="usr_..."></div>
-    <div class="form-group"><label>Tên key</label><input id="ck-name" placeholder="Gói Pro"></div>
-    <div class="form-row">
-      <div class="form-group"><label>Loại quota</label><select id="ck-kind"><option value="token">token</option><option value="credit">credit</option><option value="request">request</option></select></div>
-      <div class="form-group"><label>Số lượng</label><input id="ck-amount" type="number" value="10000"></div>
-    </div>
-    <button class="btn btn-primary btn-block" onclick="doCreateKey()">Tạo key</button>
-  </div>`);
-}
-async function doCreateKey() {
+async function doCreateKey(){
   try {
-    const r = await apiPost('/keys', {
-      user_id: $('#ck-user').value,
-      name: $('#ck-name').value,
-      quota_kind: $('#ck-kind').value,
-      quota_amount: parseInt($('#ck-amount').value) || 0
-    });
-    if (r.error) throw new Error(r.error);
-    $('.modal-overlay').remove();
-    toast('Tạo key thành công: ' + (r.plain_key||'').slice(0,16)+'…');
+    const body = { user_id: $('#ck-user').value, name: $('#ck-name').value,
+      package_id: $('#ck-pkg').value || undefined, overflow_to_wallet: $('#ck-overflow').checked };
+    if (!body.package_id){
+      body.quota_kind = $('#ck-kind').value; body.quota_scope = $('#ck-scope').value;
+      body.quota_amount = parseInt($('#ck-amount').value)||0;
+      const days = parseInt($('#ck-days').value)||0;
+      if (days > 0) body.expires_at = Date.now() + days*86400000;
+    }
+    if (!body.user_id) { toast('Chọn user trước', true); return; }
+    const r = await apiPost('/keys', body);
+    closeModal();
+    showModal(modalHead('Key đã tạo')
+    + '<div class="modal-body">'
+      + '<p class="note">Có thể xem lại key này bất cứ lúc nào bằng nút “Xem”.</p>'
+      + '<div class="reveal-box">'+esc(r.plain_key)+'</div>'
+      + '<button class="btn btn-primary btn-block" onclick="copyText(\''+esc(r.plain_key)+'\')">Copy key</button>'
+    + '</div>');
     navigate('keys');
-  } catch(e) { toast('Lỗi: '+e.message, true); }
+  } catch(e){ toast('Lỗi: '+e.message, true); }
 }
-
-async function revealKey(id) {
+function copyText(t){ navigator.clipboard.writeText(t).then(()=>toast('Đã copy vào clipboard')).catch(()=>toast('Không copy được', true)); }
+async function revealKey(id){
   try {
     const r = await apiPost('/keys/reveal', {id});
-    if (r.error) throw new Error(r.error);
-    showModal(`
-    <div class="modal-head"><h3>Plain Key</h3><button class="btn btn-secondary btn-sm" onclick="this.closest('.modal-overlay').remove()">✕</button></div>
-    <div class="modal-body">
-      <div class="alert alert-info">Key này chỉ hiển thị ở đây. Lưu lại ngay.</div>
-      <div class="reveal-box">${esc(r.plain_key)}</div>
-      <button class="btn btn-primary btn-block" onclick="navigator.clipboard.writeText('${esc(r.plain_key)}').then(()=>toast('Đã copy'))">Copy key</button>
-    </div>`);
-  } catch(e) { toast('Lỗi: '+e.message, true); }
+    showModal(modalHead('Plain key')
+    + '<div class="modal-body">'
+      + '<p class="note">Mỗi lần xem đều được ghi audit.</p>'
+      + '<div class="reveal-box">'+esc(r.plain_key)+'</div>'
+      + '<button class="btn btn-primary btn-block" onclick="copyText(\''+esc(r.plain_key)+'\')">Copy key</button>'
+    + '</div>');
+  } catch(e){ toast('Lỗi: '+e.message, true); }
 }
-
-function renewKey(id) {
-  showModal(`
-  <div class="modal-head"><h3>Gia hạn key</h3><button class="btn btn-secondary btn-sm" onclick="this.closest('.modal-overlay').remove()">✕</button></div>
-  <div class="modal-body">
-    <div class="form-group"><label>Thêm quota (token)</label><input id="rk-quota" type="number" value="0"></div>
-    <div class="form-group"><label>Gia hạn thêm (ngày)</label><input id="rk-days" type="number" value="0"></div>
-    <button class="btn btn-primary btn-block" onclick="doRenew('${id}')">Gia hạn</button>
-  </div>`);
+function renewKey(id){
+  showModal(modalHead('Gia hạn key')
+  + '<div class="modal-body">'
+    + '<div class="form-row">'
+      + '<div class="form-group"><label>Thêm quota</label><input id="rk-quota" type="number" value="0"></div>'
+      + '<div class="form-group"><label>Gia hạn thêm (ngày)</label><input id="rk-days" type="number" value="30"></div>'
+    + '</div>'
+    + '<button class="btn btn-primary btn-block" onclick="doRenew(\''+id+'\')">Gia hạn</button>'
+  + '</div>');
 }
-async function doRenew(id) {
+async function doRenew(id){
   try {
-    const r = await apiPost('/keys/renew', {
-      id: id,
-      add_quota: parseInt($('#rk-quota').value)||0,
-      extend_days: parseInt($('#rk-days').value)||0
-    });
-    if (r.error) throw new Error(r.error);
-    $('.modal-overlay').remove();
-    toast('Gia hạn thành công');
-    navigate('keys');
-  } catch(e) { toast('Lỗi: '+e.message, true); }
+    await apiPost('/keys/renew', { id, add_quota: parseInt($('#rk-quota').value)||0, extend_days: parseInt($('#rk-days').value)||0 });
+    closeModal(); toast('Gia hạn thành công'); navigate('keys');
+  } catch(e){ toast('Lỗi: '+e.message, true); }
 }
-
-async function deleteKey(id) {
-  if (!confirm('Xóa key này?')) return;
+function switchQuota(id, kind, scope, amount, expires){
+  showModal(modalHead('Đổi loại hạn mức')
+  + '<div class="modal-body">'
+    + '<div class="form-row">'
+      + '<div class="form-group"><label>Loại quota</label><select id="sq-kind">'+['credit','token','request','unlimited'].map(k=>'<option value="'+k+'"'+(k===kind?' selected':'')+'>'+k+'</option>').join('')+'</select></div>'
+      + '<div class="form-group"><label>Phạm vi</label><select id="sq-scope">'+['lifetime','hour','day','week','month'].map(k=>'<option value="'+k+'"'+(k===scope?' selected':'')+'>'+k+'</option>').join('')+'</select></div>'
+    + '</div>'
+    + '<div class="form-row">'
+      + '<div class="form-group"><label>Số lượng mới</label><input id="sq-amount" type="number" value="'+amount+'"></div>'
+      + '<div class="form-group"><label>Hết hạn (0 = giữ nguyên, −1 = ∞)</label><input id="sq-expires" type="number" value="0"></div>'
+    + '</div>'
+    + '<button class="btn btn-primary btn-block" onclick="doSwitchQuota(\''+id+'\')">Áp dụng</button>'
+  + '</div>');
+}
+async function doSwitchQuota(id){
   try {
-    const r = await apiDelete('/keys?id='+encodeURIComponent(id));
-    if (r.error) throw new Error(r.error);
-    toast('Đã xóa');
-    navigate('keys');
-  } catch(e) { toast('Lỗi: '+e.message, true); }
+    const body = { id, quota_kind: $('#sq-kind').value, quota_scope: $('#sq-scope').value, quota_amount: parseInt($('#sq-amount').value)||0 };
+    const exp = parseInt($('#sq-expires').value);
+    if (exp === -1) body.expires_at = -1;
+    else if (exp > 0) body.expires_at = Date.now() + exp*86400000;
+    await apiPost('/keys/quota', body);
+    closeModal(); toast('Đã đổi hạn mức'); navigate('keys');
+  } catch(e){ toast('Lỗi: '+e.message, true); }
+}
+async function deleteKey(id){
+  if (!confirm('Xóa key này? Hành động không hoàn tác được.')) return;
+  try { await api('DELETE', '/keys?id='+encodeURIComponent(id)); toast('Đã xóa key'); navigate('keys'); }
+  catch(e){ toast('Lỗi: '+e.message, true); }
 }
 
-function showCreateUser() {
-  showModal(`
-  <div class="modal-head"><h3>Tạo user mới</h3><button class="btn btn-secondary btn-sm" onclick="this.closest('.modal-overlay').remove()">✕</button></div>
-  <div class="modal-body">
-    <div class="form-group"><label>Username</label><input id="cu-user" placeholder="username"></div>
-    <div class="form-group"><label>Mật khẩu</label><input id="cu-pass" type="password" placeholder="••••••••"></div>
-    <button class="btn btn-primary btn-block" onclick="doCreateUser()">Tạo user</button>
-  </div>`);
+/* ===== USERS ===== */
+async function renderUsers(){
+  const data = await apiGet('/users');
+  const users = data.users || [];
+  const rows = users.map(u => '<tr>'
+    + '<td><strong>'+esc(u.username)+'</strong><div class="mono muted" style="font-size:11px;margin-top:2px">'+esc(u.id)+'</div></td>'
+    + '<td>'+(u.telegram_id ? '<span class="badge">tg</span> ' : '')+'<span class="badge">'+esc(u.role)+'</span></td>'
+    + '<td>'+(u.status==='active' ? '<span class="badge badge-success"><i class="badge-dot"></i>active</span>'
+        : u.status==='pending' ? '<span class="badge badge-warn"><i class="badge-dot"></i>pending</span>'
+        : '<span class="badge badge-error"><i class="badge-dot"></i>'+esc(u.status)+'</span>')+'</td>'
+    + '<td class="mono">'+fmtMicro(u.balance)+'</td>'
+    + '<td><span class="mono" style="font-size:12px">'+esc(u.referral_code)+'</span></td>'
+    + '<td class="muted" style="font-size:12px">'+fmtShortDate(u.created_at)+'</td>'
+    + '<td><div class="actions">'
+      + (u.status==='pending' ? '<button class="btn btn-primary btn-sm" onclick="setStatus(\''+u.id+'\',\'active\')">Duyệt</button>' : '')
+      + (u.status==='active' ? '<button class="btn btn-secondary btn-sm" onclick="setStatus(\''+u.id+'\',\'disabled\')">Khóa</button>'
+                              : '<button class="btn btn-secondary btn-sm" onclick="setStatus(\''+u.id+'\',\'active\')">Mở</button>')
+      + '<button class="btn btn-secondary btn-sm" onclick="rechargeUser(\''+u.id+'\',\''+esc(u.username)+'\')">Nạp ví</button>'
+      + '<button class="btn btn-ghost btn-sm" onclick="showLedger(\''+u.id+'\',\''+esc(u.username)+'\')">Sổ cái</button>'
+    + '</div></td>'
+  + '</tr>').join('');
+  return '<div class="page">'
+    + '<div class="page-head"><span class="eyebrow">Khách hàng</span><h2 class="page-title">Người dùng</h2>'
+    + '<p class="page-desc">Ví thuộc về user, không thuộc key. Nạp ví là doanh thu thật — affiliate được thưởng từ đây.</p></div>'
+    + '<div class="page-tools"><button class="btn btn-primary" onclick="showCreateUser()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Tạo user</button>'
+    + '<span class="muted" style="font-size:12.5px">'+fmtInt(users.length)+' user</span></div>'
+    + '<div class="tbl-wrap"><div class="tbl-scroll"><table>'
+    + '<thead><tr><th>Username</th><th>Kênh</th><th>Trạng thái</th><th>Số dư</th><th>Mã GT</th><th>Tạo lúc</th><th></th></tr></thead>'
+    + '<tbody>'+(rows || '<tr><td colspan="7" class="tbl-empty">Chưa có user nào.</td></tr>')+'</tbody>'
+    + '</table></div></div>'
+  + '</div>';
 }
-async function doCreateUser() {
+function showCreateUser(){
+  showModal(modalHead('Tạo user mới')
+  + '<div class="modal-body">'
+    + '<div class="form-group"><label>Username</label><input id="cu-user" placeholder="username"></div>'
+    + '<div class="form-group"><label>Mật khẩu</label><input id="cu-pass" type="password" placeholder="••••••••"></div>'
+    + '<div class="form-group"><label>Role</label><select id="cu-role"><option value="user">user</option><option value="admin">admin</option></select></div>'
+    + '<button class="btn btn-primary btn-block" onclick="doCreateUser()">Tạo user</button>'
+  + '</div>');
+}
+async function doCreateUser(){
   try {
-    const r = await apiPost('/users', {username:$('#cu-user').value, password:$('#cu-pass').value});
-    if (r.error) throw new Error(r.error);
-    $('.modal-overlay').remove();
-    toast('Tạo user thành công: '+r.id);
-    navigate('users');
-  } catch(e) { toast('Lỗi: '+e.message, true); }
+    await apiPost('/users', {username:$('#cu-user').value, password:$('#cu-pass').value, role:$('#cu-role').value});
+    closeModal(); toast('Tạo user thành công'); navigate('users');
+  } catch(e){ toast('Lỗi: '+e.message, true); }
 }
-
-function rechargeUser(id, name) {
-  showModal(`
-  <div class="modal-head"><h3>Nạp ví: ${name}</h3><button class="btn btn-secondary btn-sm" onclick="this.closest('.modal-overlay').remove()">✕</button></div>
-  <div class="modal-body">
-    <div class="form-group"><label>Số micro-credit (10 USD = 10000000)</label><input id="rc-amount" type="number" value="10000000"></div>
-    <button class="btn btn-primary btn-block" onclick="doRecharge('${id}')">Nạp</button>
-  </div>`);
+async function setStatus(id, status){
+  try { await apiPost('/users/status', {id, status}); toast('Đã cập nhật trạng thái'); navigate('users'); }
+  catch(e){ toast('Lỗi: '+e.message, true); }
 }
-async function doRecharge(id) {
+function rechargeUser(id, name){
+  showModal(modalHead('Nạp ví: '+name)
+  + '<div class="modal-body">'
+    + '<p class="note">1 USD = 1 credit = 1.000.000 micro. Nhập số âm để trừ. Nạp thật sẽ kích hoạt thưởng affiliate.</p>'
+    + '<div class="form-group" style="margin-top:12px"><label>Số micro-credit</label><input id="rc-amount" type="number" value="10000000"></div>'
+    + '<button class="btn btn-primary btn-block" onclick="doRecharge(\''+id+'\')">Nạp</button>'
+  + '</div>');
+}
+async function doRecharge(id){
   try {
-    const r = await apiPost('/users/recharge', {user_id: id, amount: parseInt($('#rc-amount').value)||0});
-    if (r.error) throw new Error(r.error);
-    $('.modal-overlay').remove();
-    toast('Nạp thành công. Số dư mới: '+fmtMicro(r.balance_after));
-    navigate('users');
-  } catch(e) { toast('Lỗi: '+e.message, true); }
+    const r = await apiPost('/users/recharge', {user_id:id, amount: parseInt($('#rc-amount').value)||0});
+    closeModal(); toast('Nạp thành công — số dư mới: '+fmtMicro(r.balance_after)); navigate('users');
+  } catch(e){ toast('Lỗi: '+e.message, true); }
+}
+async function showLedger(id, name){
+  try {
+    const r = await apiGet('/users/ledger?id='+encodeURIComponent(id));
+    const rows = (r.ledger||[]).map(e => '<tr>'
+      + '<td class="mono muted" style="font-size:11.5px">'+fmtShortDate(e.created_at)+'</td>'
+      + '<td><span class="badge">'+esc(e.reason)+'</span></td>'
+      + '<td class="mono" style="color:'+(e.delta>=0?'var(--viz-success)':'var(--viz-failure)')+'">'+(e.delta>=0?'+':'')+fmtMicro(e.delta)+'</td>'
+      + '<td class="mono">'+fmtMicro(e.balance_after)+'</td>'
+      + '<td class="muted">'+esc(e.channel||'')+'</td>'
+    + '</tr>').join('');
+    showModal(modalHead('Sổ cái: '+name)
+    + '<div class="modal-body">'
+      + '<div class="tbl-wrap"><div class="tbl-scroll"><table>'
+      + '<thead><tr><th>Thời gian</th><th>Lý do</th><th>Biến động</th><th>Số dư</th><th>Kênh</th></tr></thead>'
+      + '<tbody>'+(rows || '<tr><td colspan="5" class="tbl-empty">Chưa có giao dịch</td></tr>')+'</tbody>'
+      + '</table></div></div>'
+    + '</div>', true);
+  } catch(e){ toast('Lỗi: '+e.message, true); }
 }
 
-// ---- NAVIGATION ----
+/* ===== PACKAGES & ORDERS ===== */
+async function renderPackages(){
+  const [pkgs, orders] = await Promise.all([apiGet('/packages'), apiGet('/orders')]);
+  const pkgRows = (pkgs.packages||[]).map(p => '<tr>'
+    + '<td><strong>'+esc(p.name)+'</strong>'+(p.visible?'':' <span class="badge badge-warn">ẩn</span>')+'<div class="muted" style="font-size:12px;margin-top:2px">'+esc(p.description||'')+'</div></td>'
+    + '<td><span class="badge">'+esc(p.quota_kind)+'/'+esc(p.quota_scope)+'</span><div class="mono" style="font-size:12px;margin-top:3px">'+fmtInt(p.quota_amount)+'</div></td>'
+    + '<td>'+(p.duration_days>0 ? p.duration_days+' ngày' : '∞')+'</td>'
+    + '<td class="mono">'+fmtMicro(p.price_credit)+'</td>'
+    + '<td><div class="actions">'
+      + '<button class="btn btn-secondary btn-sm" onclick=\'editPackage('+JSON.stringify(p).replace(/\'/g,"\\'")+')\'>Sửa</button>'
+      + '<button class="btn btn-danger btn-sm" onclick="delPackage(\''+p.id+'\')">Xóa</button>'
+    + '</div></td>'
+  + '</tr>').join('');
+  const ordRows = (orders.orders||[]).map(o => '<tr>'
+    + '<td class="mono muted" style="font-size:11.5px">'+fmtShortDate(o.created_at)+'</td>'
+    + '<td>'+esc(o.username)+'</td>'
+    + '<td>'+esc(o.package_name)+'</td>'
+    + '<td>'+(o.kind==='new_key' ? '<span class="badge">key mới</span>' : '<span class="badge badge-warn">gia hạn</span>')+'</td>'
+    + '<td class="mono">'+fmtMicro(o.price_credit)+'</td>'
+    + '<td>'+(o.status==='paid' ? '<span class="badge badge-success"><i class="badge-dot"></i>paid</span>' : '<span class="badge badge-error">'+esc(o.status)+'</span>')+'</td>'
+  + '</tr>').join('');
+  return '<div class="page">'
+    + '<div class="page-head"><span class="eyebrow">Sản phẩm</span><h2 class="page-title">Gói & Đơn hàng</h2>'
+    + '<p class="page-desc">User mua gói thành công thì hệ thống tự sinh key và gán cho họ — chung một đường phát hành với admin tạo.</p></div>'
+    + '<div class="page-tools"><button class="btn btn-primary" onclick="showPackageForm()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Tạo gói</button></div>'
+    + '<div class="section"><div class="section-head"><span class="eyebrow">Catalog</span><h3 class="section-title" style="font-size:18px">Gói đang bán</h3></div>'
+    + '<div class="tbl-wrap"><div class="tbl-scroll"><table>'
+    + '<thead><tr><th>Gói</th><th>Quota</th><th>Thời hạn</th><th>Giá</th><th></th></tr></thead>'
+    + '<tbody>'+(pkgRows || '<tr><td colspan="5" class="tbl-empty">Chưa có gói nào — tạo gói đầu tiên để mở portal bán hàng.</td></tr>')+'</tbody>'
+    + '</table></div></div></div>'
+    + '<div class="section"><div class="section-head"><span class="eyebrow">Giao dịch</span><h3 class="section-title" style="font-size:18px">Đơn hàng gần đây</h3></div>'
+    + '<div class="tbl-wrap"><div class="tbl-scroll"><table>'
+    + '<thead><tr><th>Thời gian</th><th>User</th><th>Gói</th><th>Loại</th><th>Giá</th><th>Trạng thái</th></tr></thead>'
+    + '<tbody>'+(ordRows || '<tr><td colspan="6" class="tbl-empty">Chưa có đơn nào.</td></tr>')+'</tbody>'
+    + '</table></div></div></div>'
+  + '</div>';
+}
+function showPackageForm(pkg){
+  pkg = pkg || {};
+  showModal(modalHead((pkg.id?'Sửa':'Tạo')+' gói')
+  + '<div class="modal-body">'
+    + '<div class="form-group"><label>Tên gói</label><input id="pk-name" value="'+esc(pkg.name||'')+'"></div>'
+    + '<div class="form-group"><label>Mô tả</label><input id="pk-desc" value="'+esc(pkg.description||'')+'"></div>'
+    + '<div class="form-row">'
+      + '<div class="form-group"><label>Loại quota</label><select id="pk-kind">'+['credit','token','request','unlimited'].map(k=>'<option value="'+k+'"'+(k===(pkg.quota_kind||'token')?' selected':'')+'>'+k+'</option>').join('')+'</select></div>'
+      + '<div class="form-group"><label>Phạm vi</label><select id="pk-scope">'+['lifetime','hour','day','week','month'].map(k=>'<option value="'+k+'"'+(k===(pkg.quota_scope||'lifetime')?' selected':'')+'>'+k+'</option>').join('')+'</select></div>'
+    + '</div>'
+    + '<div class="form-row">'
+      + '<div class="form-group"><label>Số lượng quota</label><input id="pk-amount" type="number" value="'+(pkg.quota_amount||100000)+'"></div>'
+      + '<div class="form-group"><label>Số ngày (−1 = ∞)</label><input id="pk-days" type="number" value="'+(pkg.duration_days??30)+'"></div>'
+    + '</div>'
+    + '<div class="form-row">'
+      + '<div class="form-group"><label>Giá (micro-credit)</label><input id="pk-price" type="number" value="'+(pkg.price_credit||10000000)+'"></div>'
+      + '<div class="form-group"><label>RPM</label><input id="pk-rpm" type="number" value="'+(pkg.rpm||60)+'"></div>'
+    + '</div>'
+    + '<div class="form-group"><label style="display:flex;gap:8px;align-items:center;font-weight:500"><input type="checkbox" id="pk-visible" '+((pkg.visible!==false)?'checked':'')+'> Hiện trên portal cho user mua</label></div>'
+    + '<button class="btn btn-primary btn-block" onclick="savePackage(\''+(pkg.id||'')+'\')">'+(pkg.id?'Lưu thay đổi':'Tạo gói')+'</button>'
+  + '</div>');
+}
+const editPackage = p => showPackageForm(p);
+async function savePackage(id){
+  try {
+    const body = { name: $('#pk-name').value, description: $('#pk-desc').value,
+      quota_kind: $('#pk-kind').value, quota_scope: $('#pk-scope').value,
+      quota_amount: parseInt($('#pk-amount').value)||0, duration_days: parseInt($('#pk-days').value)||0,
+      price_credit: parseInt($('#pk-price').value)||0, rpm: parseInt($('#pk-rpm').value)||60,
+      visible: $('#pk-visible').checked };
+    if (id) { body.id = id; await apiPost('/packages/update', body); }
+    else await apiPost('/packages', body);
+    closeModal(); toast('Đã lưu gói'); navigate('packages');
+  } catch(e){ toast('Lỗi: '+e.message, true); }
+}
+async function delPackage(id){
+  if (!confirm('Xóa gói này?')) return;
+  try { await apiPost('/packages/delete', {id}); toast('Đã xóa gói'); navigate('packages'); }
+  catch(e){ toast('Lỗi: '+e.message, true); }
+}
 
+/* ===== PRICING & FX ===== */
+async function renderPricing(){
+  const [pr, fx] = await Promise.all([apiGet('/pricing'), apiGet('/fx')]);
+  const rows = (pr.pricing||[]).map(p => '<tr>'
+    + '<td class="mono">'+esc(p.model)+'</td>'
+    + '<td class="mono">'+fmtInt(p.input_per_mtok)+'</td>'
+    + '<td class="mono">'+fmtInt(p.output_per_mtok)+'</td>'
+    + '<td class="mono">'+fmtInt(p.cache_read_per_mtok)+'</td>'
+    + '<td class="mono">'+(p.hold_multiplier||1.5)+'×</td>'
+    + '<td><button class="btn btn-secondary btn-sm" onclick=\'editPrice('+JSON.stringify(p).replace(/\'/g,"\\'")+')\'>Sửa</button></td>'
+  + '</tr>').join('');
+  return '<div class="page">'
+    + '<div class="page-head"><span class="eyebrow">Doanh thu</span><h2 class="page-title">Bảng giá & Tỷ giá</h2>'
+    + '<p class="page-desc">Giá tính theo micro-credit trên 1M token. Billing cache-aware: Anthropic cộng thêm cache, OpenAI/Gemini tính trong output.</p></div>'
+    + '<div class="panel"><div class="panel-title">Tỷ giá VNĐ/USD</div>'
+      + '<div class="form-inline">'
+        + '<div class="form-group grow"><label>Giá 1 USD (VNĐ)</label><input id="fx-vnd" value="'+esc(fx.vnd_per_usd||'')+'"></div>'
+        + '<div class="form-group"><label>Chế độ</label><select id="fx-mode"><option value="manual"'+(fx.fx_mode==='manual'?' selected':'')+'>manual</option><option value="auto"'+(fx.fx_mode==='auto'?' selected':'')+'>auto</option></select></div>'
+        + '<button class="btn btn-primary" onclick="saveFx()">Lưu tỷ giá</button>'
+      + '</div>'
+    + '</div>'
+    + '<div class="section"><div class="section-head" style="display:flex;flex-direction:row;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px">'
+      + '<div style="display:flex;flex-direction:column;gap:6px"><span class="eyebrow">Đơn giá</span><h3 class="section-title" style="font-size:18px">Giá theo model</h3></div>'
+      + '<button class="btn btn-secondary btn-sm" onclick="editPrice({})"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>Thêm model</button>'
+    + '</div>'
+    + '<div class="tbl-wrap"><div class="tbl-scroll"><table>'
+    + '<thead><tr><th>Model</th><th>Input /1M</th><th>Output /1M</th><th>Cache read /1M</th><th>Hold</th><th></th></tr></thead>'
+    + '<tbody>'+(rows || '<tr><td colspan="6" class="tbl-empty">Chưa có đơn giá — dùng giá mặc định của hệ thống.</td></tr>')+'</tbody>'
+    + '</table></div></div></div>'
+  + '</div>';
+}
+function editPrice(p){
+  p = p || {};
+  showModal(modalHead('Đơn giá: '+(p.model?'':'model mới'))
+  + '<div class="modal-body">'
+    + '<div class="form-group"><label>Model</label><input id="pr-model" value="'+esc(p.model||'')+'"'+(p.model?' readonly':'')+'></div>'
+    + '<div class="form-row">'
+      + '<div class="form-group"><label>Input /1M</label><input id="pr-in" type="number" value="'+(p.input_per_mtok||3000000)+'"></div>'
+      + '<div class="form-group"><label>Output /1M</label><input id="pr-out" type="number" value="'+(p.output_per_mtok||15000000)+'"></div>'
+    + '</div>'
+    + '<div class="form-row">'
+      + '<div class="form-group"><label>Cache read /1M</label><input id="pr-cr" type="number" value="'+(p.cache_read_per_mtok||0)+'"></div>'
+      + '<div class="form-group"><label>Cache write /1M</label><input id="pr-cw" type="number" value="'+(p.cache_write_per_mtok||0)+'"></div>'
+    + '</div>'
+    + '<div class="form-group"><label>Hold multiplier</label><input id="pr-hm" type="number" step="0.1" value="'+(p.hold_multiplier||1.5)+'"><div class="hint">Số tiền giữ chỗ = chi phí ước tính × hệ số này</div></div>'
+    + '<button class="btn btn-primary btn-block" onclick="savePrice()">Lưu đơn giá</button>'
+  + '</div>');
+}
+async function savePrice(){
+  try {
+    await apiPost('/pricing', { model: $('#pr-model').value,
+      input_per_mtok: parseInt($('#pr-in').value)||0, output_per_mtok: parseInt($('#pr-out').value)||0,
+      cache_read_per_mtok: parseInt($('#pr-cr').value)||0, cache_write_per_mtok: parseInt($('#pr-cw').value)||0,
+      hold_multiplier: parseFloat($('#pr-hm').value)||1.5 });
+    closeModal(); toast('Đã lưu đơn giá'); navigate('pricing');
+  } catch(e){ toast('Lỗi: '+e.message, true); }
+}
+async function saveFx(){
+  try { await apiPost('/fx', {fx_mode: $('#fx-mode').value, vnd_per_usd: $('#fx-vnd').value}); toast('Đã lưu tỷ giá'); }
+  catch(e){ toast('Lỗi: '+e.message, true); }
+}
+
+/* ===== SYSTEM ===== */
+async function renderSystem(){
+  const tabs = [['logs','Log request'],['audit','Audit'],['referral','Affiliate'],['backup','Backup & Config']];
+  let body = '';
+  if (sysTab==='logs') body = await sysLogs();
+  else if (sysTab==='audit') body = await sysAudit();
+  else if (sysTab==='referral') body = await sysReferral();
+  else body = await sysBackup();
+  return '<div class="page">'
+    + '<div class="page-head"><span class="eyebrow">Vận hành</span><h2 class="page-title">Hệ thống</h2>'
+    + '<p class="page-desc">Log 3 chế độ, audit mọi thao tác, cấu hình thưởng affiliate, và backup DB — vì xóa plugin là mất hết dữ liệu.</p></div>'
+    + '<div class="tabs">'+tabs.map(([id,label])=>'<button class="tab'+(sysTab===id?' active':'')+'" onclick="sysTab=\''+id+'\';navigate(\'system\')">'+label+'</button>').join('')+'</div>'
+    + body
+  + '</div>';
+}
+async function sysLogs(){
+  const r = await apiGet('/logs');
+  const rows = (r.logs||[]).map(l => '<tr>'
+    + '<td class="mono muted" style="font-size:11.5px">'+fmtShortDate(l.created_at)+'</td>'
+    + '<td>'+(l.mode==='full' ? '<span class="badge badge-error">full</span>' : l.mode==='error_only' ? '<span class="badge badge-warn">error</span>' : '<span class="badge">std</span>')+'</td>'
+    + '<td class="mono" style="font-size:11px">'+esc(l.key_id||'—')+'</td>'
+    + '<td>'+esc(l.provider||'')+'</td>'
+    + '<td class="mono" style="font-size:12px">'+(l.upstream_status||'')+' '+esc(l.error_code||'')+'</td>'
+  + '</tr>').join('');
+  return '<div class="section">'
+    + '<div class="panel"><div class="panel-title">Chế độ log — hiện tại: <span class="badge badge-warn" style="vertical-align:2px">'+esc(r.global_mode||'standard')+'</span></div>'
+      + '<div class="form-inline">'
+        + '<div class="form-group"><label>Toàn cục</label><select id="lg-mode"><option value="standard"'+(r.global_mode==='standard'?' selected':'')+'>standard</option><option value="full"'+(r.global_mode==='full'?' selected':'')+'>full (kèm context, TTL)</option><option value="error_only"'+(r.global_mode==='error_only'?' selected':'')+'>error_only</option></select></div>'
+        + '<div class="form-group"><label>Full TTL (giờ)</label><input id="lg-ttl" type="number" value="24" style="width:90px"></div>'
+        + '<button class="btn btn-primary" onclick="saveLogConfig()">Lưu</button>'
+      + '</div>'
+      + '<div class="form-inline" style="margin-top:12px">'
+        + '<div class="form-group grow"><label>Override cho 1 key (trống = theo global)</label><input id="lg-key" placeholder="key_id"></div>'
+        + '<div class="form-group"><label>Chế độ</label><select id="lg-keymode"><option value="">inherit</option><option value="full">full</option><option value="standard">standard</option><option value="error_only">error_only</option></select></div>'
+        + '<button class="btn btn-secondary" onclick="saveKeyLogMode()">Đặt</button>'
+      + '</div>'
+    + '</div>'
+    + '<div class="tbl-wrap"><div class="tbl-scroll"><table>'
+    + '<thead><tr><th>Thời gian</th><th>Mode</th><th>Key</th><th>Provider</th><th>Lỗi</th></tr></thead>'
+    + '<tbody>'+(rows || '<tr><td colspan="5" class="tbl-empty">Chưa có log nào.</td></tr>')+'</tbody>'
+    + '</table></div></div>'
+  + '</div>';
+}
+async function saveLogConfig(){
+  try { await apiPost('/logs/config', {mode: $('#lg-mode').value, full_retention_hours: parseInt($('#lg-ttl').value)||24}); toast('Đã lưu cấu hình log'); navigate('system'); }
+  catch(e){ toast('Lỗi: '+e.message, true); }
+}
+async function saveKeyLogMode(){
+  try { await apiPost('/logs/config', {key_id: $('#lg-key').value, key_mode: $('#lg-keymode').value}); toast('Đã đặt override'); navigate('system'); }
+  catch(e){ toast('Lỗi: '+e.message, true); }
+}
+async function sysAudit(){
+  const r = await apiGet('/audit');
+  const rows = (r.audit||[]).map(a => '<tr>'
+    + '<td class="mono muted" style="font-size:11.5px">'+fmtShortDate(a.created_at)+'</td>'
+    + '<td>'+esc(a.actor)+'</td>'
+    + '<td><span class="badge">'+esc(a.action)+'</span></td>'
+    + '<td class="mono" style="font-size:11px">'+esc(a.key_id||'')+' '+esc(a.user_id||'')+'</td>'
+    + '<td class="mono muted" style="font-size:11px">'+esc(a.detail||'')+'</td>'
+  + '</tr>').join('');
+  return '<div class="tbl-wrap"><div class="tbl-scroll"><table>'
+    + '<thead><tr><th>Thời gian</th><th>Ai</th><th>Hành động</th><th>Đối tượng</th><th>Chi tiết</th></tr></thead>'
+    + '<tbody>'+(rows || '<tr><td colspan="5" class="tbl-empty">Audit trống.</td></tr>')+'</tbody>'
+    + '</table></div></div>';
+}
+async function sysReferral(){
+  const [cfg, rep] = await Promise.all([apiGet('/referral/config'), apiGet('/referral/report')]);
+  const rows = (rep.report||[]).map(x => '<tr>'
+    + '<td>'+esc(x.username)+'</td>'
+    + '<td class="mono">'+fmtInt(x.earning_count)+'</td>'
+    + '<td class="mono">'+x.max_tier+'</td>'
+    + '<td class="mono">'+fmtMicro(x.total_reward_micro)+'</td>'
+  + '</tr>').join('');
+  return '<div class="section">'
+    + '<div class="panel"><div class="panel-title">Chế độ thưởng</div>'
+      + '<div class="form-inline">'
+        + '<div class="form-group"><label>Chế độ</label><select id="rf-mode"><option value="percent"'+(cfg.mode==='percent'?' selected':'')+'>% theo tầng (trên tiền nạp)</option><option value="fixed"'+(cfg.mode==='fixed'?' selected':'')+'>Cố định mỗi lượt mời</option></select></div>'
+        + '<div class="form-group"><label>Tầng % (vd 10,3,1)</label><input id="rf-tiers" value="'+(cfg.tiers||[]).join(',')+'" style="width:110px"></div>'
+        + '<div class="form-group"><label>Fixed (micro)</label><input id="rf-fixed" type="number" value="'+(cfg.fixed_credit||0)+'" style="width:120px"></div>'
+        + '<div class="form-group"><label>Ngưỡng qualify (micro)</label><input id="rf-qualify" type="number" value="'+(cfg.qualify||0)+'" style="width:140px"></div>'
+        + '<button class="btn btn-primary" onclick="saveReferral()">Lưu</button>'
+      + '</div>'
+    + '</div>'
+    + '<div class="tbl-wrap"><div class="tbl-scroll"><table>'
+    + '<thead><tr><th>Người nhận</th><th>Số lượt thưởng</th><th>Tầng sâu nhất</th><th>Tổng thưởng</th></tr></thead>'
+    + '<tbody>'+(rows || '<tr><td colspan="4" class="tbl-empty">Chưa có thưởng nào.</td></tr>')+'</tbody>'
+    + '</table></div></div>'
+  + '</div>';
+}
+async function saveReferral(){
+  try {
+    const tiers = $('#rf-tiers').value.split(',').map(s=>parseInt(s.trim())).filter(n=>n>0);
+    await apiPost('/referral/config', { mode: $('#rf-mode').value, tiers,
+      fixed_credit: parseInt($('#rf-fixed').value)||0, qualify_recharge: parseInt($('#rf-qualify').value)||0 });
+    toast('Đã lưu cấu hình thưởng'); navigate('system');
+  } catch(e){ toast('Lỗi: '+e.message, true); }
+}
+async function sysBackup(){
+  const st = await apiGet('/settings');
+  const rows = Object.entries(st.settings||{}).map(([k,v]) => '<tr><td class="mono">'+esc(k)+'</td><td class="mono">'+esc(v)+'</td></tr>').join('');
+  return '<div class="section">'
+    + '<div class="panel"><div class="panel-title">Backup & Restore DB</div>'
+      + '<p class="note">Xóa plugin là mất toàn bộ user, ví và key. Tải DB về định kỳ và cất ở nơi riêng. Restore sẽ thay toàn bộ DB hiện tại.</p>'
+      + '<div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:12px">'
+        + '<button class="btn btn-primary" onclick="downloadBackup()"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>Tải DB backup</button>'
+        + '<input type="file" id="restore-file" accept=".db,.sqlite" style="width:auto;font-size:12px">'
+        + '<button class="btn btn-danger" onclick="doRestore()">Restore từ file</button>'
+      + '</div>'
+    + '</div>'
+    + '<div class="tbl-wrap"><div class="tbl-scroll"><table>'
+    + '<thead><tr><th>Khóa</th><th>Giá trị</th></tr></thead><tbody>'+(rows||'<tr><td colspan="2" class="tbl-empty">Trống</td></tr>')+'</tbody>'
+    + '</table></div></div>'
+  + '</div>';
+}
+async function downloadBackup(){
+  try {
+    const r = await fetch(MGMT_BASE + '/backup', {headers:{'Authorization':'Bearer '+mgmtKey}});
+    if (!r.ok) throw new Error('backup: '+r.status);
+    const blob = await r.blob();
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'manager-key-pro-'+new Date().toISOString().slice(0,10)+'.db';
+    a.click();
+    toast('Đang tải backup…');
+  } catch(e){ toast('Lỗi: '+e.message, true); }
+}
+async function doRestore(){
+  const f = $('#restore-file').files[0];
+  if (!f){ toast('Chọn file DB trước', true); return; }
+  if (!confirm('Restore sẽ THAY TOÀN BỘ database hiện tại. Tiếp tục?')) return;
+  try {
+    const buf = await f.arrayBuffer();
+    const r = await fetch(MGMT_BASE + '/restore', {
+      method:'POST', headers:{'Authorization':'Bearer '+mgmtKey, 'Content-Type':'application/octet-stream'}, body: buf });
+    const data = await r.json().catch(()=>({}));
+    if (!r.ok) throw new Error(data.error || ('restore: '+r.status));
+    toast('Restore thành công'); navigate('dashboard');
+  } catch(e){ toast('Lỗi: '+e.message, true); }
+}
+
+/* ===== NAV / SHELL ===== */
+const ICONS = {
+  dashboard:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/></svg>',
+  keys:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>',
+  users:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>',
+  packages:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.27 6.96 12 12.01 20.73 6.96"/><line x1="12" y1="22.08" x2="12" y2="12"/></svg>',
+  pricing:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>',
+  system:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>'
+};
 const PAGES = {
-  dashboard: {label:'Tổng quan', icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg>'},
-  keys: {label:'Keys', icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>'},
-  users: {label:'Người dùng', icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>'},
-  usage: {label:'Lịch sử', icon:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>'},
+  dashboard:'Tổng quan', keys:'Keys', users:'Người dùng',
+  packages:'Gói & Đơn', pricing:'Bảng giá', system:'Hệ thống'
 };
 
-async function navigate(page) {
+async function navigate(page){
   currentPage = page;
   $$('.nav-item').forEach(el => el.classList.toggle('active', el.dataset.page===page));
   const content = $('#page-content');
-  content.innerHTML = '<div class="empty">Đang tải…</div>';
+  content.innerHTML = '<div class="page"><div class="skel" style="height:34px;width:260px"></div><div class="skel" style="height:120px"></div><div class="skel" style="height:300px"></div></div>';
   try {
     let html = '';
     if (page==='dashboard') html = await renderDashboard();
     else if (page==='keys') html = await renderKeys();
     else if (page==='users') html = await renderUsers();
-    else if (page==='usage') html = await renderUsage();
+    else if (page==='packages') html = await renderPackages();
+    else if (page==='pricing') html = await renderPricing();
+    else if (page==='system') html = await renderSystem();
     content.innerHTML = html;
-  } catch(e) {
-    content.innerHTML = `<div class="alert alert-error">Lỗi tải dữ liệu: ${esc(e.message)}</div>`;
+  } catch(e){
+    content.innerHTML = '<div class="page"><div class="panel" style="border-color:var(--warning-border);background:var(--warning-bg)"><div class="panel-title" style="color:var(--warning-text,var(--error-color))">Lỗi tải dữ liệu</div><p class="note">'+esc(e.message)+'</p><div><button class="btn btn-secondary" onclick="navigate(\''+page+'\')">Thử lại</button></div></div></div>';
   }
 }
 
-function renderApp() {
-  const navItems = Object.entries(PAGES).map(([id, p]) =>
-    `<div class="nav-item ${id===currentPage?'active':''}" data-page="${id}" onclick="navigate('${id}')">${p.icon}${p.label}</div>`
+function renderApp(){
+  const navItems = Object.entries(PAGES).map(([id,label]) =>
+    '<button class="nav-item'+(id===currentPage?' active':'')+'" data-page="'+id+'" onclick="navigate(\''+id+'\')">'+ICONS[id]+'<span class="lbl">'+label+'</span></button>'
   ).join('');
-  document.getElementById('root').innerHTML = `
-  <div class="app">
-    <div class="sidebar">
-      <div class="sidebar-brand"><h2>Manager Key Pro</h2><p>Admin Dashboard · v0.1.0-r5</p></div>
-      ${navItems}
-    </div>
-    <div class="main"><div id="page-content"></div></div>
-  </div>`;
+  document.getElementById('root').innerHTML =
+  '<div class="shell">'
+    + '<aside class="sidebar">'
+      + '<div class="brand"><div class="brand-mark">'+ICONS.keys+'</div><div><h1>Manager Key Pro</h1><p>ADMIN · v0.2.0</p></div></div>'
+      + '<nav class="nav">'+navItems+'</nav>'
+      + '<div class="side-foot"><span class="conn-dot"></span><span>connected</span></div>'
+    + '</aside>'
+    + '<main class="main"><div id="page-content"></div></main>'
+  + '</div>';
   navigate(currentPage);
 }
 
-function showLogin() {
-  document.getElementById('root').innerHTML = `
-  <div class="login-wrap">
-    <div class="login-card">
-      <h1>Manager Key Pro</h1>
-      <p>Nhập Management Key của CPA để truy cập admin dashboard.</p>
-      <div id="login-err"></div>
-      <input id="login-key" type="password" placeholder="Management Key" onkeydown="if(event.key==='Enter')doLogin()">
-      <button class="btn btn-primary btn-block" onclick="doLogin()">Đăng nhập</button>
-    </div>
-  </div>`;
+function showLogin(){
+  document.getElementById('root').innerHTML =
+  '<div class="login-wrap"><div class="login-card">'
+    + '<div class="brand"><div class="brand-mark">'+ICONS.keys+'</div><div><h1>Manager Key Pro</h1><p>QUẢN TRỊ</p></div></div>'
+    + '<p>Nhập Management Key của CPA để vào trang quản trị. Key này chính là key Cậu dùng đăng nhập panel CPA.</p>'
+    + '<div id="login-err"></div>'
+    + '<div class="form-group"><label>Management Key</label><input id="login-key" type="password" placeholder="••••••••" onkeydown="if(event.key===\'Enter\')doLogin()"></div>'
+    + '<button class="btn btn-primary btn-block" onclick="doLogin()">Đăng nhập</button>'
+  + '</div></div>';
   setTimeout(()=>$('#login-key')?.focus(), 100);
 }
-
-async function doLogin() {
+async function doLogin(){
   const key = $('#login-key').value.trim();
   if (!key) return;
-  // Test the key by calling a management endpoint
   try {
     const r = await fetch(MGMT_BASE + '/stats', {headers:{'Authorization':'Bearer '+key}});
-    if (r.status === 401 || r.status === 403) {
-      $('#login-err').innerHTML = '<div class="alert alert-error">Management key không đúng.</div>';
+    if (r.status === 401 || r.status === 403){
+      $('#login-err').innerHTML = '<p class="note" style="color:var(--error-color);margin-bottom:12px">Management key không đúng.</p>';
       return;
     }
     mgmtKey = key;
-    localStorage.setItem('mkp_admin_key', key);
+    try{ localStorage.setItem('mkp_admin_key', key); sessionStorage.setItem('mkp_key', key); }catch(e){}
     renderApp();
-  } catch(e) {
-    $('#login-err').innerHTML = `<div class="alert alert-error">Lỗi kết nối: ${esc(e.message)}</div>`;
+  } catch(e){
+    $('#login-err').innerHTML = '<p class="note" style="color:var(--error-color);margin-bottom:12px">Lỗi kết nối: '+esc(e.message)+'</p>';
   }
 }
 
-// Init — reuse the key the CPA panel already saved (same origin), no second login.
-if (!mgmtKey) {
+/* ===== init ===== */
+syncTheme();
+if (!mgmtKey){
   const k = readPanelMgmtKey();
-  if (k) { mgmtKey = k; localStorage.setItem('mkp_admin_key', k); }
+  if (k) { mgmtKey = k; try{ localStorage.setItem('mkp_admin_key', k); }catch(e){} }
 }
 if (mgmtKey) renderApp(); else showLogin();
 </script>
