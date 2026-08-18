@@ -17,7 +17,7 @@ func managementRegister() ([]byte, error) {
 	reg := map[string]any{
 		// Data routes are management-authenticated; the SPA authenticates itself
 		// with the CPA management key (the iframe cannot inherit panel session).
-		"Routes": []map[string]string{
+		"routes": []map[string]string{
 			{"Method": "GET", "Path": "/keys"},
 			{"Method": "POST", "Path": "/keys"},
 			{"Method": "GET", "Path": "/keys/:id"},
@@ -36,7 +36,7 @@ func managementRegister() ([]byte, error) {
 			{"Method": "GET", "Path": "/stats"},
 		},
 		// Single UI resource -> one sidebar menu item, not a menu per route.
-		"Resources": []map[string]string{
+		"resources": []map[string]string{
 			{"Path": "/index.html", "Menu": "Manager Key Pro", "Description": "Admin dashboard"},
 		},
 	}
