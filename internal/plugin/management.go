@@ -73,7 +73,7 @@ func handleManagement(payload []byte) ([]byte, error) {
 	if ui, errUI := serveAdminUI(req.Path); errUI == nil && ui != nil {
 		resp := managementResponse{
 			StatusCode: 200,
-			Headers:    map[string][]string{"Content-Type": {"text/html; charset=utf-8"}},
+			Headers:    map[string][]string{"Content-Type": {"text/html; charset=utf-8"}, "Cache-Control": {"no-store"}},
 			Body:       ui,
 		}
 		out, errOut := json.Marshal(resp)
