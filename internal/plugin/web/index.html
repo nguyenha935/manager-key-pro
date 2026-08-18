@@ -94,8 +94,23 @@ let currentPage = 'dashboard';
 const RESOURCE_BASE = '/v0/resource/plugins/manager-key-pro';
 const MGMT_BASE = '/v0/management/plugins/manager-key-pro';
 
+// Replicate the panel's reversible storage obfuscation so the admin iframe can
+// read the management key the panel already saved (same-origin localStorage).
+const ENC_PREFIX = 'enc::v1::';
+const SECRET_SALT = 'cli-proxy-api-webui::secure-storage';
+function _xorkey(){ return new TextEncoder().encode(SECRET_SALT+'|'+window.location.host+'|'+navigator.userAgent); }
+function _deobf(p){ if(!p||!p.startsWith(ENC_PREFIX)) return p; var b=atob(p.slice(ENC_PREFIX.length)), k=_xorkey(), s=''; for(var i=0;i<b.length;i++){ s+=String.fromCharCode(b.charCodeAt(i)^k[i%k.length]);} return s; }
+function readPanelMgmtKey(){
+  try {
+    var w = window.parent || window;
+    var raw = null;
+    try { raw = w.localStorage.getItem('managementKey'); } catch(e){ try { raw = localStorage.getItem('managementKey'); } catch(e2){} }
+    return raw ? _deobf(raw) : '';
+  } catch(e){ return ''; }
+}
+
 async function apiGet(path) {
-  const r = await fetch(RESOURCE_BASE + path);
+  const r = await fetch(MGMT_BASE + path, { headers:{'Authorization':'Bearer '+mgmtKey} });
   if (!r.ok) throw new Error(`GET ${path}: ${r.status}`);
   return r.json();
 }
@@ -425,7 +440,11 @@ async function doLogin() {
   }
 }
 
-// Init
+// Init — reuse the key the CPA panel already saved (same origin), no second login.
+if (!mgmtKey) {
+  const k = readPanelMgmtKey();
+  if (k) { mgmtKey = k; sessionStorage.setItem('mkp_key', k); }
+}
 if (mgmtKey) renderApp(); else showLogin();
 </script>
 </body>
