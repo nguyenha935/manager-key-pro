@@ -91,7 +91,6 @@ let mgmtKey = sessionStorage.getItem('mkp_key') || '';
 let currentPage = 'dashboard';
 
 // API helpers
-const RESOURCE_BASE = '/v0/resource/plugins/manager-key-pro';
 const MGMT_BASE = '/v0/management/plugins/manager-key-pro';
 
 // Mirrors the panel's XOR obfuscation + zustand-persist envelope, exactly as
@@ -399,21 +398,12 @@ function renderApp() {
   document.getElementById('root').innerHTML = `
   <div class="app">
     <div class="sidebar">
-      <div class="sidebar-brand"><h2>Manager Key Pro</h2><p>Admin Dashboard · v0.1.0-r3</p></div>
+      <div class="sidebar-brand"><h2>Manager Key Pro</h2><p>Admin Dashboard · v0.1.0-r4</p></div>
       ${navItems}
-      <div style="padding:12px 20px;border-top:1px solid var(--line);margin-top:12px">
-        <button class="btn btn-secondary btn-sm btn-block" onclick="logout()">Đăng xuất</button>
-      </div>
     </div>
     <div class="main"><div id="page-content"></div></div>
   </div>`;
   navigate(currentPage);
-}
-
-function logout() {
-  sessionStorage.removeItem('mkp_key');
-  mgmtKey = '';
-  showLogin();
 }
 
 function showLogin() {
