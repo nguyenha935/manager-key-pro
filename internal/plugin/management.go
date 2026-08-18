@@ -17,23 +17,21 @@ func managementRegister() ([]byte, error) {
 	reg := map[string]any{
 		// Data routes are management-authenticated; the SPA authenticates itself
 		// with the CPA management key (the iframe cannot inherit panel session).
+		// NOTE: CPA's normalizeManagementRoute REJECTS any path containing ":",
+		// so :id path params are impossible. IDs are passed via query or body instead
+		// (same convention as the official cpa-key-policy plugin).
 		"routes": []map[string]string{
-			{"Method": "GET", "Path": "/keys"},
-			{"Method": "POST", "Path": "/keys"},
-			{"Method": "GET", "Path": "/keys/:id"},
-			{"Method": "PATCH", "Path": "/keys/:id"},
-			{"Method": "DELETE", "Path": "/keys/:id"},
-			{"Method": "POST", "Path": "/keys/:id/reveal"},
-			{"Method": "POST", "Path": "/keys/:id/renew"},
-			{"Method": "PATCH", "Path": "/keys/:id/quota"},
-			{"Method": "GET", "Path": "/users"},
-			{"Method": "POST", "Path": "/users"},
-			{"Method": "GET", "Path": "/users/:id"},
-			{"Method": "PATCH", "Path": "/users/:id"},
-			{"Method": "POST", "Path": "/users/:id/recharge"},
-			{"Method": "GET", "Path": "/users/:id/ledger"},
-			{"Method": "GET", "Path": "/usage"},
-			{"Method": "GET", "Path": "/stats"},
+			{"Method": "GET", "Path": "/plugins/manager-key-pro/keys"},
+			{"Method": "POST", "Path": "/plugins/manager-key-pro/keys"},
+			{"Method": "DELETE", "Path": "/plugins/manager-key-pro/keys"},
+			{"Method": "GET", "Path": "/plugins/manager-key-pro/keys/detail"},
+			{"Method": "POST", "Path": "/plugins/manager-key-pro/keys/reveal"},
+			{"Method": "POST", "Path": "/plugins/manager-key-pro/keys/renew"},
+			{"Method": "GET", "Path": "/plugins/manager-key-pro/users"},
+			{"Method": "POST", "Path": "/plugins/manager-key-pro/users"},
+			{"Method": "POST", "Path": "/plugins/manager-key-pro/users/recharge"},
+			{"Method": "GET", "Path": "/plugins/manager-key-pro/usage"},
+			{"Method": "GET", "Path": "/plugins/manager-key-pro/stats"},
 		},
 		// Single UI resource -> one sidebar menu item, not a menu per route.
 		"resources": []map[string]string{
@@ -108,25 +106,20 @@ func handleManagement(payload []byte) ([]byte, error) {
 		return mgmtListKeys()
 	case method == "POST" && path == "/keys":
 		return mgmtCreateKey(req.Body)
-	case method == "GET" && strings.HasPrefix(path, "/keys/") && strings.HasSuffix(path, "/reveal"):
-		id := strings.TrimSuffix(strings.TrimPrefix(path, "/keys/"), "/reveal")
-		return mgmtRevealKey(id)
-	case method == "GET" && strings.HasPrefix(path, "/keys/"):
-		id := strings.TrimPrefix(path, "/keys/")
-		return mgmtGetKey(id)
-	case method == "DELETE" && strings.HasPrefix(path, "/keys/"):
-		id := strings.TrimPrefix(path, "/keys/")
-		return mgmtDeleteKey(id)
-	case method == "POST" && strings.HasPrefix(path, "/keys/") && strings.HasSuffix(path, "/renew"):
-		id := strings.TrimSuffix(strings.TrimPrefix(path, "/keys/"), "/renew")
-		return mgmtRenewKey(id, req.Body)
+	case method == "GET" && path == "/keys/detail":
+		return mgmtGetKey(queryVal(req, "id"))
+	case method == "DELETE" && path == "/keys":
+		return mgmtDeleteKey(queryVal(req, "id"))
+	case method == "POST" && path == "/keys/reveal":
+		return mgmtRevealKey(bodyStr(req, "id"))
+	case method == "POST" && path == "/keys/renew":
+		return mgmtRenewKey(bodyStr(req, "id"), req.Body)
 	case method == "GET" && path == "/users":
 		return mgmtListUsers()
 	case method == "POST" && path == "/users":
 		return mgmtCreateUser(req.Body)
-	case method == "POST" && strings.HasPrefix(path, "/users/") && strings.HasSuffix(path, "/recharge"):
-		id := strings.TrimSuffix(strings.TrimPrefix(path, "/users/"), "/recharge")
-		return mgmtRecharge(id, req.Body)
+	case method == "POST" && path == "/users/recharge":
+		return mgmtRecharge(bodyStr(req, "user_id"), req.Body)
 	case method == "GET" && path == "/usage":
 		return mgmtListUsage()
 	case method == "GET" && path == "/stats":
@@ -134,6 +127,34 @@ func handleManagement(payload []byte) ([]byte, error) {
 	default:
 		return mgmtJSON(http.StatusNotFound, map[string]string{"error": "route not found", "path": path})
 	}
+}
+
+// queryVal returns the first value for key in the request query string, or "".
+// Used to pass record IDs without :id path params (rejected by CPA's route normalizer).
+func queryVal(req managementRequest, key string) string {
+	if vals := req.Query[key]; len(vals) > 0 {
+		return vals[0]
+	}
+	return ""
+}
+
+// bodyStr decodes the request body as a JSON object and returns the string field
+// named by key (also accepts key "id" for user_id-style bodies). Returns "" if
+// the field is missing or not a string.
+func bodyStr(req managementRequest, key string) string {
+	var obj map[string]any
+	if err := json.Unmarshal(req.Body, &obj); err != nil {
+		return ""
+	}
+	if v, ok := obj[key]; ok {
+		if str, okV := v.(string); okV {
+			return str
+		}
+		if num, okV := v.(float64); okV {
+			return fmt.Sprintf("%.0f", num)
+		}
+	}
+	return ""
 }
 
 func mgmtJSON(status int, body any) ([]byte, error) {

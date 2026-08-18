@@ -284,7 +284,7 @@ async function doCreateKey() {
 
 async function revealKey(id) {
   try {
-    const r = await apiPost('/keys/'+id+'/reveal', {});
+    const r = await apiPost('/keys/reveal', {id});
     if (r.error) throw new Error(r.error);
     showModal(`
     <div class="modal-head"><h3>Plain Key</h3><button class="btn btn-secondary btn-sm" onclick="this.closest('.modal-overlay').remove()">✕</button></div>
@@ -307,7 +307,8 @@ function renewKey(id) {
 }
 async function doRenew(id) {
   try {
-    const r = await apiPost('/keys/'+id+'/renew', {
+    const r = await apiPost('/keys/renew', {
+      id: id,
       add_quota: parseInt($('#rk-quota').value)||0,
       extend_days: parseInt($('#rk-days').value)||0
     });
@@ -321,7 +322,7 @@ async function doRenew(id) {
 async function deleteKey(id) {
   if (!confirm('Xóa key này?')) return;
   try {
-    const r = await apiDelete('/keys/'+id);
+    const r = await apiDelete('/keys?id='+encodeURIComponent(id));
     if (r.error) throw new Error(r.error);
     toast('Đã xóa');
     navigate('keys');
@@ -357,7 +358,7 @@ function rechargeUser(id, name) {
 }
 async function doRecharge(id) {
   try {
-    const r = await apiPost('/users/'+id+'/recharge', {amount: parseInt($('#rc-amount').value)||0});
+    const r = await apiPost('/users/recharge', {user_id: id, amount: parseInt($('#rc-amount').value)||0});
     if (r.error) throw new Error(r.error);
     $('.modal-overlay').remove();
     toast('Nạp thành công. Số dư mới: '+fmtMicro(r.balance_after));
@@ -398,7 +399,7 @@ function renderApp() {
   document.getElementById('root').innerHTML = `
   <div class="app">
     <div class="sidebar">
-      <div class="sidebar-brand"><h2>Manager Key Pro</h2><p>Admin Dashboard · v0.1.0-r4</p></div>
+      <div class="sidebar-brand"><h2>Manager Key Pro</h2><p>Admin Dashboard · v0.1.0-r5</p></div>
       ${navItems}
     </div>
     <div class="main"><div id="page-content"></div></div>
