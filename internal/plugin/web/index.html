@@ -437,7 +437,7 @@ async function doLogin() {
       return;
     }
     mgmtKey = key;
-    sessionStorage.setItem('mkp_key', key);
+    localStorage.setItem('mkp_admin_key', key);
     renderApp();
   } catch(e) {
     $('#login-err').innerHTML = `<div class="alert alert-error">Lỗi kết nối: ${esc(e.message)}</div>`;
@@ -447,7 +447,7 @@ async function doLogin() {
 // Init — reuse the key the CPA panel already saved (same origin), no second login.
 if (!mgmtKey) {
   const k = readPanelMgmtKey();
-  if (k) { mgmtKey = k; sessionStorage.setItem('mkp_key', k); }
+  if (k) { mgmtKey = k; localStorage.setItem('mkp_admin_key', k); }
 }
 if (mgmtKey) renderApp(); else showLogin();
 </script>
