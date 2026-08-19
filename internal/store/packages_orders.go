@@ -14,6 +14,8 @@ type Package struct {
 	QuotaKind    string
 	QuotaScope   string
 	QuotaAmount  int64
+	PlanType     string
+	WindowHours  int64
 	DurationDays int64
 	PriceCredit  int64
 	ModelsJSON   string
@@ -27,14 +29,14 @@ type PackagesRepo struct{ db *DB }
 func (d *DB) Packages() *PackagesRepo { return &PackagesRepo{db: d} }
 
 const packageColumns = `id, name, COALESCE(description,''), quota_kind, quota_scope,
-	quota_amount, duration_days, price_credit, COALESCE(allowed_models,'[]'), rpm,
+	quota_amount, plan_type, COALESCE(window_hours,0), duration_days, price_credit, COALESCE(allowed_models,'[]'), rpm,
 	visible, created_at`
 
 func scanPackage(row interface{ Scan(...any) error }) (Package, error) {
 	var p Package
 	var visible int
 	err := row.Scan(&p.ID, &p.Name, &p.Description, &p.QuotaKind, &p.QuotaScope,
-		&p.QuotaAmount, &p.DurationDays, &p.PriceCredit, &p.ModelsJSON, &p.RPM,
+		&p.QuotaAmount, &p.PlanType, &p.WindowHours, &p.DurationDays, &p.PriceCredit, &p.ModelsJSON, &p.RPM,
 		&visible, &p.CreatedAt)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -81,6 +83,8 @@ type CreatePackageInput struct {
 	QuotaKind    string
 	QuotaScope   string
 	QuotaAmount  int64
+	PlanType     string
+	WindowHours  int64
 	DurationDays int64
 	PriceCredit  int64
 	Models       []string
@@ -105,6 +109,14 @@ func (r *PackagesRepo) Create(in CreatePackageInput) (Package, error) {
 	if in.DurationDays == 0 {
 		in.DurationDays = -1
 	}
+	if in.PlanType == "" {
+		switch in.QuotaScope {
+		case "hour", "day", "week", "month":
+			in.PlanType = "windowed"
+		default:
+			in.PlanType = "lifetime"
+		}
+	}
 	if in.RPM <= 0 {
 		in.RPM = 60
 	}
@@ -115,10 +127,11 @@ func (r *PackagesRepo) Create(in CreatePackageInput) (Package, error) {
 	id := newID("pkg")
 	_, err := r.db.sql.Exec(`
 		INSERT INTO packages (id, name, description, quota_kind, quota_scope,
-			quota_amount, duration_days, price_credit, allowed_models, rpm, visible, created_at)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+			quota_amount, plan_type, window_hours, duration_days, price_credit, allowed_models, rpm, visible, created_at)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 		id, in.Name, nullIfEmpty(in.Description), in.QuotaKind, in.QuotaScope,
-		in.QuotaAmount, in.DurationDays, in.PriceCredit, encodeJSONList(in.Models), in.RPM, vis, Now())
+		in.QuotaAmount, in.PlanType, nullWindowHours(in.WindowHours), in.DurationDays,
+		in.PriceCredit, encodeJSONList(in.Models), in.RPM, vis, Now())
 	if err != nil {
 		if isUniqueViolation(err) {
 			return Package{}, ErrDuplicate
@@ -135,11 +148,12 @@ func (r *PackagesRepo) Update(id string, in CreatePackageInput) (Package, error)
 	}
 	_, err := r.db.sql.Exec(`
 		UPDATE packages SET name = ?, description = ?, quota_kind = ?, quota_scope = ?,
-			quota_amount = ?, duration_days = ?, price_credit = ?, allowed_models = ?,
+			quota_amount = ?, plan_type = ?, window_hours = ?, duration_days = ?, price_credit = ?, allowed_models = ?,
 			rpm = ?, visible = ?
 		WHERE id = ?`,
 		in.Name, nullIfEmpty(in.Description), in.QuotaKind, in.QuotaScope,
-		in.QuotaAmount, in.DurationDays, in.PriceCredit, encodeJSONList(in.Models),
+		in.QuotaAmount, in.PlanType, nullWindowHours(in.WindowHours), in.DurationDays,
+		in.PriceCredit, encodeJSONList(in.Models),
 		in.RPM, vis, id)
 	if err != nil {
 		return Package{}, fmt.Errorf("update package: %w", err)

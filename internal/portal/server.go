@@ -93,6 +93,7 @@ func (s *Server) Start() {
 	mux.HandleFunc("GET /me/orders", s.handleMyOrders)
 	mux.HandleFunc("POST /webhook/recharge", s.handleWebhookRecharge)
 	mux.HandleFunc("GET /", s.handleIndex)
+	mux.HandleFunc("GET /v1/key/check", s.handleKeyCheck)
 	mux.HandleFunc("GET /health", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte(`{"status":"ok","service":"manager-key-pro-portal"}`))

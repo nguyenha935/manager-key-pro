@@ -9,16 +9,17 @@ import (
 )
 
 // Price holds per-model pricing in micro-credit PER MILLION TOKENS. The DB's
-// pricing table stores the same units, so no conversion is needed on load.
-// PerCallCredit is an optional flat micro-credit charge per call (used for hold).
+// pricing table stores REAL columns, so the per-token fields are float64 to
+// scan cleanly (int64 scan of REAL crashed: "1e+06" -> int64). PerCallCredit
+// is an optional flat micro-credit charge per call (used for hold).
 type Price struct {
 	Model             string
-	InputPerMtok      int64   `json:"input_per_mtok"`
-	OutputPerMtok     int64   `json:"output_per_mtok"`
-	ReasoningPerMtok  int64   `json:"reasoning_per_mtok"`
-	CacheReadPerMtok  int64   `json:"cache_read_per_mtok"`
-	CacheWritePerMtok int64   `json:"cache_write_per_mtok"`
-	PerCallCredit     int64   `json:"per_call_credit"`
+	InputPerMtok      float64 `json:"input_per_mtok"`
+	OutputPerMtok     float64 `json:"output_per_mtok"`
+	ReasoningPerMtok  float64 `json:"reasoning_per_mtok"`
+	CacheReadPerMtok  float64 `json:"cache_read_per_mtok"`
+	CacheWritePerMtok float64 `json:"cache_write_per_mtok"`
+	PerCallCredit     float64 `json:"per_call_credit"`
 	HoldMultiplier    float64 `json:"hold_multiplier"`
 }
 
@@ -32,17 +33,21 @@ func DefaultPrices() map[string]Price {
 	}
 }
 
+const priceColumns = `model, input_per_mtok, output_per_mtok, reasoning_per_mtok,
+	cache_read_per_mtok, cache_write_per_mtok, COALESCE(per_call_credit,0), hold_multiplier`
+
+func scanPrice(row interface{ Scan(...any) error }) (Price, error) {
+	var p Price
+	err := row.Scan(&p.Model, &p.InputPerMtok, &p.OutputPerMtok, &p.ReasoningPerMtok,
+		&p.CacheReadPerMtok, &p.CacheWritePerMtok, &p.PerCallCredit, &p.HoldMultiplier)
+	return p, err
+}
+
 // LoadPrice looks up the price for a model from the pricing table, falling back
 // to defaults. Returns micro-credit per million tokens (no pre-division).
 func LoadPrice(db *store.DB, model string) (Price, error) {
-	var p Price
-	errQuery := db.SQL().QueryRow(`
-		SELECT model, input_per_mtok, output_per_mtok, reasoning_per_mtok,
-			cache_read_per_mtok, cache_write_per_mtok, COALESCE(per_call_credit,0), hold_multiplier
-		FROM pricing WHERE model = ?`, model).
-		Scan(&p.Model, &p.InputPerMtok, &p.OutputPerMtok, &p.ReasoningPerMtok,
-			&p.CacheReadPerMtok, &p.CacheWritePerMtok, &p.PerCallCredit, &p.HoldMultiplier)
-	if errQuery == nil {
+	p, err := scanPrice(db.SQL().QueryRow(`SELECT `+priceColumns+` FROM pricing WHERE model = ?`, model))
+	if err == nil {
 		return p, nil
 	}
 
@@ -64,13 +69,13 @@ func LoadPrice(db *store.DB, model string) (Price, error) {
 // ComputeCost calculates the micro-credit cost for a usage record. Prices are
 // micro-credit per million tokens, so cost = tokens * rate / 1_000_000.
 func ComputeCost(rec UsageRecord, price Price) int64 {
-	input := rec.Detail.InputTokens
-	output := rec.Detail.OutputTokens
-	reasoning := rec.Detail.ReasoningTokens
-	cacheRead := rec.Detail.CacheReadTokens
-	cacheWrite := rec.Detail.CacheCreationTokens
+	input := float64(rec.Detail.InputTokens)
+	output := float64(rec.Detail.OutputTokens)
+	reasoning := float64(rec.Detail.ReasoningTokens)
+	cacheRead := float64(rec.Detail.CacheReadTokens)
+	cacheWrite := float64(rec.Detail.CacheCreationTokens)
 
-	var micro int64
+	var micro float64
 	if isCacheAdditive(rec.Provider) {
 		// Anthropic: cache tokens are additive on top of input.
 		micro = input*price.InputPerMtok +
@@ -84,7 +89,7 @@ func ComputeCost(rec UsageRecord, price Price) int64 {
 			output*price.OutputPerMtok +
 			reasoning*price.ReasoningPerMtok
 	}
-	return micro / 1_000_000
+	return int64(micro / 1_000_000)
 }
 
 // isCacheAdditive reports whether cache tokens are additive (Anthropic) or a
@@ -135,19 +140,15 @@ func UpdatePrice(db *store.DB, p Price) error {
 
 // ListPrices returns all rows in the pricing table.
 func ListPrices(db *store.DB) ([]Price, error) {
-	rows, err := db.SQL().Query(`
-		SELECT model, input_per_mtok, output_per_mtok, reasoning_per_mtok,
-			cache_read_per_mtok, cache_write_per_mtok, COALESCE(per_call_credit,0), hold_multiplier
-		FROM pricing ORDER BY model`)
+	rows, err := db.SQL().Query(`SELECT ` + priceColumns + ` FROM pricing ORDER BY model`)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
 	var out []Price
 	for rows.Next() {
-		var p Price
-		if errScan := rows.Scan(&p.Model, &p.InputPerMtok, &p.OutputPerMtok, &p.ReasoningPerMtok,
-			&p.CacheReadPerMtok, &p.CacheWritePerMtok, &p.PerCallCredit, &p.HoldMultiplier); errScan != nil {
+		p, errScan := scanPrice(rows)
+		if errScan != nil {
 			return nil, errScan
 		}
 		out = append(out, p)

@@ -135,6 +135,8 @@ func handleMethod(method string, payload []byte) ([]byte, error) {
 		return managementRegister()
 	case "management.handle":
 		return handleManagement(payload)
+	case "scheduler.pick":
+		return handleSchedulerPick(payload)
 	case "usage.handle":
 		return handleUsage(payload)
 	case "request.complete":
@@ -221,6 +223,7 @@ func handleRegister(payload []byte) ([]byte, error) {
 		"metadata":       meta,
 		"capabilities": map[string]any{
 			"frontend_auth_provider":   true,
+			"scheduler":                true,
 			"request_interceptor":      true,
 			"usage_plugin":             true,
 			"request_lifecycle_plugin": true,

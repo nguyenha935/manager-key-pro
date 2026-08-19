@@ -12,6 +12,7 @@ import (
 	"github.com/nguyenha935/manager-key-pro/internal/billing"
 	"github.com/nguyenha935/manager-key-pro/internal/crypto"
 	"github.com/nguyenha935/manager-key-pro/internal/issue"
+	"github.com/nguyenha935/manager-key-pro/internal/scheduler"
 	"github.com/nguyenha935/manager-key-pro/internal/store"
 )
 
@@ -33,10 +34,13 @@ func managementRegister() ([]byte, error) {
 			route("GET", "/keys"), route("POST", "/keys"), route("DELETE", "/keys"),
 			route("GET", "/keys/detail"), route("POST", "/keys/reveal"),
 			route("POST", "/keys/renew"), route("POST", "/keys/quota"),
+			route("POST", "/keys/update"),
+			route("GET", "/keys/bindings"), route("POST", "/keys/bindings"),
 			// Users
 			route("GET", "/users"), route("POST", "/users"), route("GET", "/users/detail"),
 			route("POST", "/users/recharge"), route("GET", "/users/ledger"),
-			route("POST", "/users/status"),
+			route("POST", "/users/status"), route("POST", "/users/update"),
+			route("POST", "/users/reset-password"),
 			// Packages & orders
 			route("GET", "/packages"), route("POST", "/packages"),
 			route("POST", "/packages/update"), route("POST", "/packages/delete"),
@@ -50,11 +54,11 @@ func managementRegister() ([]byte, error) {
 			route("GET", "/referral/config"), route("POST", "/referral/config"),
 			route("GET", "/referral/report"),
 			// Logs & audit
-			route("GET", "/logs"), route("POST", "/logs/config"),
+			route("GET", "/logs"), route("GET", "/logs/detail"), route("POST", "/logs/config"),
 			route("GET", "/audit"),
 			// Backup / restore / settings
 			route("GET", "/backup"), route("POST", "/restore"),
-			route("GET", "/settings"),
+			route("GET", "/settings"), route("POST", "/settings"),
 		},
 		// Single UI resource -> one sidebar menu item, not a menu per route.
 		"resources": []map[string]string{
@@ -138,6 +142,12 @@ func handleManagement(payload []byte) ([]byte, error) {
 		return mgmtRenewKey(bodyStr(req, "id"), req.Body)
 	case method == "POST" && path == "/keys/quota":
 		return mgmtSwitchQuota(bodyStr(req, "id"), req.Body)
+	case method == "POST" && path == "/keys/update":
+		return mgmtUpdateKey(req.Body)
+	case method == "GET" && path == "/keys/bindings":
+		return mgmtListBindings(queryVal(req, "key_id"))
+	case method == "POST" && path == "/keys/bindings":
+		return mgmtSetBindings(req.Body)
 
 	// ---- Users ----
 	case method == "GET" && path == "/users":
@@ -152,6 +162,10 @@ func handleManagement(payload []byte) ([]byte, error) {
 		return mgmtUserLedger(queryVal(req, "id"))
 	case method == "POST" && path == "/users/status":
 		return mgmtSetUserStatus(bodyStr(req, "id"), bodyStr(req, "status"))
+	case method == "POST" && path == "/users/update":
+		return mgmtUpdateUser(req.Body)
+	case method == "POST" && path == "/users/reset-password":
+		return mgmtResetPassword(req.Body)
 
 	// ---- Packages & orders ----
 	case method == "GET" && path == "/packages":
@@ -192,6 +206,8 @@ func handleManagement(payload []byte) ([]byte, error) {
 	// ---- Logs & audit ----
 	case method == "GET" && path == "/logs":
 		return mgmtListLogs(req)
+	case method == "GET" && path == "/logs/detail":
+		return mgmtLogDetail(req)
 	case method == "POST" && path == "/logs/config":
 		return mgmtPutLogsConfig(req.Body)
 	case method == "GET" && path == "/audit":
@@ -204,6 +220,8 @@ func handleManagement(payload []byte) ([]byte, error) {
 		return mgmtRestore(req.Body)
 	case method == "GET" && path == "/settings":
 		return mgmtGetSettings()
+	case method == "POST" && path == "/settings":
+		return mgmtPutSettings(req.Body)
 
 	default:
 		return mgmtJSON(http.StatusNotFound, map[string]string{"error": "route not found", "path": path})
@@ -282,6 +300,8 @@ func mgmtListKeys() ([]byte, error) {
 	rows, errQuery := app.db.SQL().Query(`
 		SELECT id, user_id, prefix, name, status, quota_kind, quota_scope,
 			quota_amount, quota_used, expires_at, overflow_to_wallet, rpm,
+			plan_type, COALESCE(window_hours,0),
+			COALESCE(period_start,0), COALESCE(period_end,0),
 			created_at, COALESCE(last_used_at,0)
 		FROM keys ORDER BY created_at DESC LIMIT 500`)
 	if errQuery != nil {
@@ -301,6 +321,10 @@ func mgmtListKeys() ([]byte, error) {
 		ExpiresAt        int64  `json:"expires_at"`
 		OverflowToWallet int    `json:"overflow_to_wallet"`
 		RPM              int    `json:"rpm"`
+		PlanType         string `json:"plan_type"`
+		WindowHours      int64  `json:"window_hours"`
+		PeriodStart      int64  `json:"period_start"`
+		PeriodEnd        int64  `json:"period_end"`
 		CreatedAt        int64  `json:"created_at"`
 		LastUsedAt       int64  `json:"last_used_at"`
 	}
@@ -309,7 +333,8 @@ func mgmtListKeys() ([]byte, error) {
 		var r row
 		if errScan := rows.Scan(&r.ID, &r.UserID, &r.Prefix, &r.Name, &r.Status,
 			&r.QuotaKind, &r.QuotaScope, &r.QuotaAmount, &r.QuotaUsed, &r.ExpiresAt,
-			&r.OverflowToWallet, &r.RPM, &r.CreatedAt, &r.LastUsedAt); errScan != nil {
+			&r.OverflowToWallet, &r.RPM, &r.PlanType, &r.WindowHours,
+			&r.PeriodStart, &r.PeriodEnd, &r.CreatedAt, &r.LastUsedAt); errScan != nil {
 			return mgmtJSON(http.StatusInternalServerError, map[string]string{"error": errScan.Error()})
 		}
 		out = append(out, r)
@@ -328,12 +353,17 @@ func mgmtGetKey(id string) ([]byte, error) {
 		}
 		return mgmtJSON(http.StatusInternalServerError, map[string]string{"error": errKey.Error()})
 	}
+	bindings, _ := scheduler.ListBindings(app.db, k.ID)
 	return mgmtJSON(http.StatusOK, map[string]any{
 		"id": k.ID, "user_id": k.UserID, "prefix": k.Prefix, "name": k.Name,
 		"status": k.Status, "quota_kind": k.QuotaKind, "quota_scope": k.QuotaScope,
 		"quota_amount": k.QuotaAmount, "quota_used": k.QuotaUsed,
+		"plan_type": k.PlanType, "window_hours": k.WindowHours,
+		"period_start": k.PeriodStart, "period_end": k.PeriodEnd,
 		"expires_at": k.ExpiresAt, "overflow_to_wallet": k.OverflowToWallet,
-		"rpm": k.RPM, "allowed_models": k.AllowedModels, "log_mode": k.LogMode,
+		"rpm": k.RPM, "allowed_models": k.AllowedModels,
+		"allowed_providers": k.AllowedProviders, "ip_allowlist": k.IPAllowlist,
+		"log_mode": k.LogMode, "bindings": bindings,
 		"created_at": k.CreatedAt, "last_used_at": k.LastUsedAt,
 	})
 }
@@ -345,9 +375,13 @@ type createKeyBody struct {
 	QuotaKind   string   `json:"quota_kind"`
 	QuotaScope  string   `json:"quota_scope"`
 	QuotaAmount int64    `json:"quota_amount"`
+	PlanType    string   `json:"plan_type"`
+	WindowHours int64    `json:"window_hours"`
 	ExpiresAt   int64    `json:"expires_at"`
 	RPM         int      `json:"rpm"`
 	Models      []string `json:"allowed_models"`
+	Providers   []string `json:"allowed_providers"`
+	IPAllowlist []string `json:"ip_allowlist"`
 	Overflow    bool     `json:"overflow_to_wallet"`
 }
 
@@ -372,6 +406,8 @@ func mgmtCreateKey(body []byte) ([]byte, error) {
 		in.QuotaKind = pkg.QuotaKind
 		in.QuotaScope = pkg.QuotaScope
 		in.QuotaAmount = pkg.QuotaAmount
+		in.PlanType = pkg.PlanType
+		in.WindowHours = pkg.WindowHours
 		if pkg.DurationDays > 0 {
 			in.ExpiresAt = store.Now() + pkg.DurationDays*24*60*60*1000
 		} else {
@@ -405,9 +441,13 @@ func mgmtCreateKey(body []byte) ([]byte, error) {
 		in.Name = "API Key"
 	}
 
+	if in.PlanType == "windowed" && in.WindowHours > 0 && in.QuotaScope == "lifetime" {
+		in.QuotaScope = "day" // custom window needs a cyclic scope
+	}
 	k, plain, errIssue := issue.Key(app.db, app.secretKey, in.UserID, issue.Spec{
 		Name: in.Name, QuotaKind: in.QuotaKind, QuotaScope: in.QuotaScope,
-		QuotaAmount: in.QuotaAmount, ExpiresAt: in.ExpiresAt, RPM: in.RPM,
+		QuotaAmount: in.QuotaAmount, PlanType: in.PlanType, WindowHours: in.WindowHours,
+		ExpiresAt: in.ExpiresAt, RPM: in.RPM,
 		Models: in.Models, PackageID: in.PackageID,
 	}, "admin")
 	if errIssue != nil {
@@ -418,10 +458,16 @@ func mgmtCreateKey(body []byte) ([]byte, error) {
 			log.Printf("[mkp] set overflow: %v", errOverflow)
 		}
 	}
+	if len(in.Providers) > 0 || len(in.IPAllowlist) > 0 {
+		if errUpdate := app.db.Keys().SetAccess(k.ID, in.Providers, in.IPAllowlist); errUpdate != nil {
+			log.Printf("[mkp] set access: %v", errUpdate)
+		}
+	}
 	return mgmtJSON(http.StatusCreated, map[string]any{
 		"id": k.ID, "user_id": k.UserID, "name": k.Name,
 		"prefix": k.Prefix, "plain_key": plain,
 		"quota_kind": k.QuotaKind, "quota_amount": k.QuotaAmount,
+		"plan_type": k.PlanType, "window_hours": k.WindowHours,
 		"expires_at": k.ExpiresAt,
 	})
 }
@@ -767,6 +813,8 @@ func mgmtListPackages() ([]byte, error) {
 		QuotaKind    string   `json:"quota_kind"`
 		QuotaScope   string   `json:"quota_scope"`
 		QuotaAmount  int64    `json:"quota_amount"`
+		PlanType     string   `json:"plan_type"`
+		WindowHours  int64    `json:"window_hours"`
 		DurationDays int64    `json:"duration_days"`
 		PriceCredit  int64    `json:"price_credit"`
 		Models       []string `json:"allowed_models"`
@@ -779,7 +827,7 @@ func mgmtListPackages() ([]byte, error) {
 		var models []string
 		_ = json.Unmarshal([]byte(p.ModelsJSON), &models)
 		out = append(out, view{p.ID, p.Name, p.Description, p.QuotaKind, p.QuotaScope,
-			p.QuotaAmount, p.DurationDays, p.PriceCredit, models, p.RPM, p.Visible, p.CreatedAt})
+			p.QuotaAmount, p.PlanType, p.WindowHours, p.DurationDays, p.PriceCredit, models, p.RPM, p.Visible, p.CreatedAt})
 	}
 	if out == nil {
 		out = []view{}
@@ -794,6 +842,8 @@ type packageBody struct {
 	QuotaKind    string   `json:"quota_kind"`
 	QuotaScope   string   `json:"quota_scope"`
 	QuotaAmount  int64    `json:"quota_amount"`
+	PlanType     string   `json:"plan_type"`
+	WindowHours  int64    `json:"window_hours"`
 	DurationDays int64    `json:"duration_days"`
 	PriceCredit  int64    `json:"price_credit"`
 	Models       []string `json:"allowed_models"`
@@ -809,6 +859,7 @@ func (b packageBody) toInput() store.CreatePackageInput {
 	return store.CreatePackageInput{
 		Name: b.Name, Description: b.Description, QuotaKind: b.QuotaKind,
 		QuotaScope: b.QuotaScope, QuotaAmount: b.QuotaAmount,
+		PlanType: b.PlanType, WindowHours: b.WindowHours,
 		DurationDays: b.DurationDays, PriceCredit: b.PriceCredit,
 		Models: b.Models, RPM: b.RPM, Visible: visible,
 	}
@@ -1096,47 +1147,85 @@ func mgmtReferralReport() ([]byte, error) {
 
 func mgmtListLogs(req managementRequest) ([]byte, error) {
 	keyID := queryVal(req, "key_id")
+	userID := queryVal(req, "user_id")
 	mode := queryVal(req, "mode")
-	q := `SELECT id, COALESCE(key_id,''), COALESCE(user_id,''), mode,
-		COALESCE(error_code,''), COALESCE(upstream_status,0), COALESCE(provider,''),
-		COALESCE(attempt,0), COALESCE(purge_after,0), created_at
-		FROM request_logs`
+	provider := queryVal(req, "provider")
+	model := queryVal(req, "model")
+	status := queryVal(req, "status")
+	q := `SELECT l.id, COALESCE(l.key_id,''), COALESCE(l.user_id,''), l.mode,
+		COALESCE(l.model,''), COALESCE(l.alias,''), COALESCE(l.alias_model,''),
+		l.input_tokens, l.output_tokens, l.cache_read_tokens, l.cache_creation_tokens,
+		l.cost, COALESCE(l.source,''), COALESCE(l.status,''),
+		COALESCE(l.error_code,''), COALESCE(l.upstream_status,0), COALESCE(l.provider,''),
+		COALESCE(l.upstream_account,''), COALESCE(l.attempt,0), COALESCE(l.purge_after,0), l.created_at
+		FROM request_logs l`
 	var conds []string
 	var args []any
 	if keyID != "" {
-		conds = append(conds, "key_id = ?")
+		conds = append(conds, "l.key_id = ?")
 		args = append(args, keyID)
 	}
+	if userID != "" {
+		conds = append(conds, "l.user_id = ?")
+		args = append(args, userID)
+	}
 	if mode != "" {
-		conds = append(conds, "mode = ?")
+		conds = append(conds, "l.mode = ?")
 		args = append(args, mode)
+	}
+	if provider != "" {
+		conds = append(conds, "l.provider = ?")
+		args = append(args, provider)
+	}
+	if model != "" {
+		conds = append(conds, "(l.model LIKE ? OR l.alias LIKE ?)")
+		args = append(args, "%"+model+"%", "%"+model+"%")
+	}
+	if status != "" {
+		conds = append(conds, "l.status = ?")
+		args = append(args, status)
 	}
 	if len(conds) > 0 {
 		q += " WHERE " + strings.Join(conds, " AND ")
 	}
-	q += " ORDER BY created_at DESC LIMIT 200"
+	q += " ORDER BY l.created_at DESC LIMIT 200"
 	rows, errQuery := app.db.SQL().Query(q, args...)
 	if errQuery != nil {
 		return mgmtJSON(http.StatusInternalServerError, map[string]string{"error": errQuery.Error()})
 	}
 	defer rows.Close()
 	type row struct {
-		ID             int64  `json:"id"`
-		KeyID          string `json:"key_id"`
-		UserID         string `json:"user_id"`
-		Mode           string `json:"mode"`
-		ErrorCode      string `json:"error_code"`
-		UpstreamStatus int    `json:"upstream_status"`
-		Provider       string `json:"provider"`
-		Attempt        int    `json:"attempt"`
-		PurgeAfter     int64  `json:"purge_after"`
-		CreatedAt      int64  `json:"created_at"`
+		ID                 int64  `json:"id"`
+		KeyID              string `json:"key_id"`
+		UserID             string `json:"user_id"`
+		Mode               string `json:"mode"`
+		Model              string `json:"model"`
+		Alias              string `json:"alias"`
+		AliasModel         string `json:"alias_model"`
+		InputTokens        int64  `json:"input_tokens"`
+		OutputTokens       int64  `json:"output_tokens"`
+		CacheReadTokens    int64  `json:"cache_read_tokens"`
+		CacheCreationTokens int64 `json:"cache_creation_tokens"`
+		Cost               int64  `json:"cost"`
+		Source             string `json:"source"`
+		Status             string `json:"status"`
+		ErrorCode          string `json:"error_code"`
+		UpstreamStatus     int    `json:"upstream_status"`
+		Provider           string `json:"provider"`
+		UpstreamAccount    string `json:"upstream_account"`
+		Attempt            int    `json:"attempt"`
+		PurgeAfter         int64  `json:"purge_after"`
+		CreatedAt          int64  `json:"created_at"`
 	}
 	var out []row
 	for rows.Next() {
 		var r row
-		if errScan := rows.Scan(&r.ID, &r.KeyID, &r.UserID, &r.Mode, &r.ErrorCode,
-			&r.UpstreamStatus, &r.Provider, &r.Attempt, &r.PurgeAfter, &r.CreatedAt); errScan != nil {
+		if errScan := rows.Scan(&r.ID, &r.KeyID, &r.UserID, &r.Mode,
+			&r.Model, &r.Alias, &r.AliasModel,
+			&r.InputTokens, &r.OutputTokens, &r.CacheReadTokens, &r.CacheCreationTokens,
+			&r.Cost, &r.Source, &r.Status,
+			&r.ErrorCode, &r.UpstreamStatus, &r.Provider,
+			&r.UpstreamAccount, &r.Attempt, &r.PurgeAfter, &r.CreatedAt); errScan != nil {
 			return mgmtJSON(http.StatusInternalServerError, map[string]string{"error": errScan.Error()})
 		}
 		out = append(out, r)
@@ -1144,7 +1233,36 @@ func mgmtListLogs(req managementRequest) ([]byte, error) {
 	if out == nil {
 		out = []row{}
 	}
-	return mgmtJSON(http.StatusOK, map[string]any{"logs": out, "global_mode": app.db.Settings().Get(store.SettingGlobalLogMode)})
+	return mgmtJSON(http.StatusOK, map[string]any{"logs": out})
+}
+
+// mgmtLogDetail returns one log row including full-mode context/response.
+func mgmtLogDetail(req managementRequest) ([]byte, error) {
+	id := queryVal(req, "id")
+	if id == "" {
+		return mgmtJSON(http.StatusBadRequest, map[string]string{"error": "id required"})
+	}
+	var keyID, mode, model, alias, status, ctx, resp, errCode, provider string
+	var inTok, outTok, crTok, cwTok, cost int64
+	var createdAt int64
+	errRow := app.db.SQL().QueryRow(`
+		SELECT COALESCE(key_id,''), mode, COALESCE(model,''), COALESCE(alias,''),
+			COALESCE(status,''), COALESCE(request_context,''), COALESCE(response_body,''),
+			COALESCE(error_code,''), COALESCE(provider,''),
+			input_tokens, output_tokens, cache_read_tokens, cache_creation_tokens, cost, created_at
+		FROM request_logs WHERE id = ?`, id).
+		Scan(&keyID, &mode, &model, &alias, &status, &ctx, &resp, &errCode, &provider,
+			&inTok, &outTok, &crTok, &cwTok, &cost, &createdAt)
+	if errRow != nil {
+		return mgmtJSON(http.StatusNotFound, map[string]string{"error": "log not found"})
+	}
+	return mgmtJSON(http.StatusOK, map[string]any{
+		"id": id, "key_id": keyID, "mode": mode, "model": model, "alias": alias,
+		"status": status, "input_tokens": inTok, "output_tokens": outTok,
+		"cache_read_tokens": crTok, "cache_creation_tokens": cwTok,
+		"cost": cost, "error_code": errCode, "provider": provider,
+		"request_context": ctx, "response_body": resp, "created_at": createdAt,
+	})
 }
 
 func mgmtPutLogsConfig(body []byte) ([]byte, error) {
@@ -1248,6 +1366,30 @@ func mgmtGetSettings() ([]byte, error) {
 		return mgmtJSON(http.StatusInternalServerError, map[string]string{"error": errAll.Error()})
 	}
 	return mgmtJSON(http.StatusOK, map[string]any{"settings": all})
+}
+
+func mgmtPutSettings(body []byte) ([]byte, error) {
+	var in map[string]string
+	if errUnmarshal := json.Unmarshal(body, &in); errUnmarshal != nil {
+		return mgmtJSON(http.StatusBadRequest, map[string]string{"error": "invalid body"})
+	}
+	allowed := map[string]bool{
+		store.SettingFXMode: true, store.SettingVNDPerUSD: true,
+		store.SettingReferralMode: true, store.SettingReferralTiers: true,
+		store.SettingReferralFixed: true, store.SettingReferralQualify: true,
+		store.SettingGlobalLogMode: true, store.SettingFullRetentionHours: true,
+		store.SettingBackupDir: true, store.SettingBackupWarnDays: true,
+	}
+	for k, v := range in {
+		if !allowed[k] {
+			continue
+		}
+		if errSet := app.db.Settings().Set(k, v); errSet != nil {
+			return mgmtJSON(http.StatusInternalServerError, map[string]string{"error": errSet.Error()})
+		}
+	}
+	audit("admin", "settings.update", "", "", "")
+	return mgmtGetSettings()
 }
 
 // referralOnRecharge is a thin wrapper so management.go does not import the

@@ -268,7 +268,7 @@ async function logout(){
 
 /* ===== SHELL ===== */
 function render(){
-  const tabs = [['home','Tổng quan'],['keys','Keys'],['shop','Mua gói'],['wallet','Ví'],['ref','Affiliate'],['usage','Lịch sử']];
+  const tabs = [['home','Tổng quan'],['keys','Keys'],['shop','Mua gói'],['wallet','Ví'],['ref','Affiliate'],['usage','Lịch sử'],['check','Kiểm tra key'],['account','Tài khoản']];
   document.getElementById('root').innerHTML =
   '<div class="topbar"><div class="topbar-in">'
     + '<div class="brand"><div class="brand-mark">'+IC_KEY+'</div><div><h1>Manager Key Pro</h1><p>PORTAL</p></div></div>'
@@ -292,6 +292,8 @@ async function loadPage(){
     else if (page==='wallet') c.innerHTML = await pWallet();
     else if (page==='ref') c.innerHTML = await pRef();
     else if (page==='usage') c.innerHTML = await pUsage();
+    else if (page==='check') { c.innerHTML = await pCheck(); return; }
+    else if (page==='account') c.innerHTML = await pAccount();
   } catch(e){ c.innerHTML = '<div class="card card-pad"><p class="note" style="color:var(--error-color)">'+esc(e.message)+'</p></div>'; }
 }
 
@@ -320,7 +322,7 @@ async function pKeys(){
     const pct = k.quota_amount>0 ? Math.min(100, k.quota_used/k.quota_amount*100) : 0;
     const mCls = pct>=90?'bad':pct>=70?'warn':'';
     return '<tr>'
-      + '<td><span class="mono">'+esc(k.prefix)+'</span><div class="muted" style="font-size:11.5px;margin-top:2px">'+esc(k.name||'')+'</div></td>'
+      + '<td><span class="mono">'+esc(k.prefix)+'</span><div class="muted" style="font-size:11.5px;margin-top:2px">'+esc(k.name||'')+(k.plan_type==='windowed'?' · ⏱ '+fmtInt(k.window_hours||0)+' giờ':' · lifetime')+'</div></td>'
       + '<td style="min-width:140px"><span class="badge">'+esc(k.quota_kind)+'/'+esc(k.quota_scope)+'</span><div class="mono" style="font-size:12px;margin-top:4px">'+fmtInt(k.quota_used)+' / '+fmtInt(k.quota_amount)+' ('+pct.toFixed(0)+'%)</div><div class="meter"><i class="'+mCls+'" style="width:'+pct+'%"></i></div></td>'
       + '<td>'+(k.status==='active'?'<span class="badge badge-success"><i class="badge-dot"></i>active</span>':'<span class="badge badge-warn"><i class="badge-dot"></i>'+esc(k.status)+'</span>')+'<div class="muted" style="font-size:11.5px;margin-top:3px">hạn: '+(k.expires_at>0?fmtDate(k.expires_at):'∞')+'</div></td>'
       + '<td>'+(k.overflow_to_wallet?'<span class="badge badge-success">bật</span>':'<span class="badge">tắt</span>')+'</td>'
@@ -333,7 +335,7 @@ async function pKeys(){
   return '<div class="card"><div class="card-head"><h2>Keys của tôi</h2><span class="muted" style="font-size:12.5px">'+fmtInt((r.keys||[]).length)+' key</span></div>'
     + '<div class="tbl-scroll"><table>'
     + '<thead><tr><th>Key</th><th>Quota</th><th>Trạng thái</th><th>Overflow</th><th></th></tr></thead>'
-    + '<tbody>'+(rows || '<tr><td colspan="5" class="tbl-empty">Chưa có key nào — hãy mua gói đầu tiên.</td></tr>')+'</tbody>'
+    + '<tbody>'+(rows || '<tr><td colspan="6" class="tbl-empty">Chưa có key nào — hãy mua gói đầu tiên.</td></tr>')+'</tbody>'
     + '</table></div></div>';
 }
 async function reveal(id){
@@ -357,7 +359,7 @@ async function pShop(){
     '<div class="pkg">'
       + '<h3>'+esc(p.name)+'</h3>'
       + '<div class="desc">'+esc(p.description||'')+'</div>'
-      + '<div class="specs"><span class="badge">'+esc(p.quota_kind)+'/'+esc(p.quota_scope)+'</span><span class="mono" style="font-size:12px">'+fmtInt(p.quota_amount)+'</span><span class="muted" style="font-size:12px">'+(p.duration_days>0?p.duration_days+' ngày':'trọn đời')+'</span></div>'
+      + '<div class="specs"><span class="badge">'+(p.plan_type==='windowed'?'⏱ '+fmtInt(p.window_hours||0)+' giờ':'∞ lifetime')+'</span><span class="mono" style="font-size:12px">'+esc(p.quota_kind)+'/'+esc(p.quota_scope)+' · '+fmtInt(p.quota_amount)+'</span><span class="muted" style="font-size:12px">'+(p.duration_days>0?p.duration_days+' ngày':'trọn đời')+'</span></div>'
       + '<div class="price">'+fmtMicro(p.price_credit)+'</div>'
       + '<div class="buy">'
         + '<button class="btn btn-primary btn-block" onclick="buy(\''+p.id+'\',\'new_key\')">Mua key mới</button>'
@@ -425,16 +427,77 @@ async function pUsage(){
   const r = await api('GET','/me/usage');
   const rows = (r.usage||[]).map(u => '<tr>'
     + '<td class="mono muted" style="font-size:11.5px">'+fmtDate(u.created_at)+'</td>'
-    + '<td>'+esc(u.provider||'')+' / '+esc(u.model||'')+'</td>'
-    + '<td class="mono">'+fmtInt(u.input_tokens)+' / '+fmtInt(u.output_tokens)+'</td>'
+    + '<td>'+esc(u.alias||u.model||'')+(u.model&&u.alias&&u.model!==u.alias?'<div class="muted" style="font-size:10.5px">'+esc(u.model)+'</div>':'')+'</td>'
+    + '<td class="mono">'+fmtInt(u.input_tokens)+' / '+fmtInt(u.output_tokens)+'<div class="muted" style="font-size:10.5px">cache '+fmtInt((u.cache_read_tokens||0)+(u.cache_creation_tokens||0))+'</div></td>'
     + '<td class="mono">'+fmtMicro(u.cost)+'</td>'
+    + '<td>'+(u.status==='ok'?'<span class="badge badge-success"><i class="badge-dot"></i>ok</span>':'<span class="badge badge-error">'+esc(u.status||'—')+'</span>')+'</td>'
     + '<td>'+(u.source==='wallet'?'<span class="badge badge-success">ví</span>':u.source==='key_quota'?'<span class="badge">key</span>':'<span class="badge">—</span>')+'</td>'
   + '</tr>').join('');
   return '<div class="card"><div class="card-head"><h2>Lịch sử sử dụng</h2><span class="muted" style="font-size:12.5px">'+fmtInt((r.usage||[]).length)+' bản ghi</span></div>'
     + '<div class="tbl-scroll"><table>'
-    + '<thead><tr><th>Thời gian</th><th>Model</th><th>In / Out</th><th>Chi phí</th><th>Nguồn</th></tr></thead>'
+    + '<thead><tr><th>Thời gian</th><th>Model</th><th>In / Out</th><th>Chi phí</th><th>Trạng thái</th><th>Nguồn</th></tr></thead>'
     + '<tbody>'+(rows || '<tr><td colspan="5" class="tbl-empty">Chưa có request nào.</td></tr>')+'</tbody>'
     + '</table></div></div>';
+}
+
+async function pCheck(){
+  return '<div class="card"><div class="card-head"><h2>Kiểm tra key</h2></div>'
+    + '<div class="card-pad">'
+    + '<p class="note" style="margin-bottom:14px">Dán key vào để xem trạng thái, hạn mức còn lại và chu kỳ reset — không cần đăng nhập. Đây cũng là API công khai: <span class="mono">GET /v1/key/check</span> (header <span class="mono">Authorization: Bearer KEY</span> hoặc <span class="mono">X-Api-Key</span>).</p>'
+    + '<div class="form-group"><label>Plain key</label><input id="chk-input" type="password" placeholder="mkp_..." onkeydown="if(event.key===\'Enter\')doCheck()"></div>'
+    + '<button class="btn btn-primary" onclick="doCheck()">Kiểm tra</button>'
+    + '<div id="chk-result" style="margin-top:16px"></div>'
+    + '</div></div>';
+}
+async function doCheck(){
+  const key = $('#chk-input').value.trim();
+  if (!key){ toast('Nhập key trước', true); return; }
+  try {
+    const r = await fetch('/v1/key/check', {headers:{'Authorization':'Bearer '+key}});
+    const d = await r.json();
+    if (!r.ok){ $('#chk-result').innerHTML = '<span class="badge badge-error">'+esc(d.error||'invalid_api_key')+'</span>'; return; }
+    const pct = d.quota_amount>0 ? Math.min(100, d.quota_used/d.quota_amount*100) : 0;
+    const mCls = pct>=90?'bad':pct>=70?'warn':'';
+    $('#chk-result').innerHTML =
+      '<div class="stats" style="grid-template-columns:repeat(2,1fr)">'
+      + '<div class="stat" style="--tile-accent:'+(d.status==='active'?'var(--viz-success)':'var(--viz-failure)')+'"><span class="l">Trạng thái</span><span class="v" style="font-size:17px">'+esc(d.status)+'</span></div>'
+      + '<div class="stat" style="--tile-accent:var(--primary-color)"><span class="l">Plan</span><span class="v" style="font-size:15px">'+(d.plan_type==='windowed'?'⏱ '+fmtInt(d.window_hours||0)+' giờ':'∞ lifetime')+'</span></div>'
+      + '</div>'
+      + '<div class="card" style="margin-top:12px"><div class="card-pad">'
+      + '<div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:6px"><span>Đã dùng</span><span class="mono">'+fmtInt(d.quota_used)+' / '+fmtInt(d.quota_amount)+'</span></div>'
+      + '<div class="meter" style="height:8px"><i class="'+mCls+'" style="width:'+pct+'%"></i></div>'
+      + '<div style="display:flex;justify-content:space-between;font-size:13px;margin-top:10px"><span>Còn lại</span><span class="mono">'+fmtInt(d.quota_remaining)+' '+esc(d.quota_kind)+'</span></div>'
+      + '<div style="display:flex;justify-content:space-between;font-size:13px;margin-top:4px"><span>Hết hạn key</span><span class="mono">'+(d.expires_at>0?fmtDate(d.expires_at):'∞')+'</span></div>'
+      + (d.period_end>0?'<div style="display:flex;justify-content:space-between;font-size:13px;margin-top:4px"><span>Reset chu kỳ</span><span class="mono">'+fmtDate(d.period_end)+'</span></div>':'')
+      + '<div style="display:flex;justify-content:space-between;font-size:13px;margin-top:4px"><span>Overflow ví</span><span>'+(d.overflow_to_wallet?'bật':'tắt')+'</span></div>'
+      + '</div></div>';
+  } catch(e){ toast('Lỗi: '+e.message, true); }
+}
+async function pAccount(){
+  me = await api('GET','/me');
+  return '<div class="card"><div class="card-head"><h2>Tài khoản</h2></div>'
+    + '<div class="card-pad">'
+    + '<div class="stats" style="grid-template-columns:repeat(3,1fr);margin-bottom:18px">'
+    + '<div class="stat" style="--tile-accent:var(--primary-color)"><span class="l">Username</span><span class="v" style="font-size:16px">'+esc(me.username)+'</span></div>'
+    + '<div class="stat" style="--tile-accent:var(--viz-success)"><span class="l">Số dư</span><span class="v" style="font-size:16px">'+fmtMicro(me.balance)+'</span></div>'
+    + '<div class="stat" style="--tile-accent:var(--amber-color)"><span class="l">Telegram</span><span class="v" style="font-size:14px">'+(me.telegram_id?'đã liên kết':'chưa')+'</span></div>'
+    + '</div>'
+    + '<div class="form-group"><label>Mật khẩu mới (để trống nếu không đổi)</label><input id="acc-pass" type="password" placeholder="••••••••" autocomplete="new-password"></div>'
+    + '<button class="btn btn-primary" onclick="setPass()">Đổi mật khẩu</button>'
+    + '<div style="border-top:1px solid var(--border-color);margin:20px 0"></div>'
+    + '<div class="form-group"><label>Liên kết Telegram (ID người dùng)</label><input id="acc-tg" placeholder="123456789"></div>'
+    + '<button class="btn btn-secondary" onclick="linkTg()">Liên kết Telegram</button>'
+    + '<div style="border-top:1px solid var(--border-color);margin:20px 0"></div>'
+    + '<button class="btn btn-secondary" onclick="logout()">Đăng xuất</button>'
+    + '</div></div>';
+}
+async function setPass(){
+  try { await api('POST','/me/set-password',{password:$('#acc-pass').value}); toast('Đã đổi mật khẩu'); }
+  catch(e){ toast(e.message, true); }
+}
+async function linkTg(){
+  try { await api('POST','/me/link-telegram',{telegram_id:$('#acc-tg').value.trim()}); toast('Đã liên kết Telegram'); }
+  catch(e){ toast(e.message, true); }
 }
 
 /* boot + ref cookie */
@@ -442,7 +505,16 @@ async function pUsage(){
   const m = location.search.match(/[?&]ref=([^&]+)/);
   if (m) document.cookie = 'mkp_ref='+encodeURIComponent(m[1])+';path=/;max-age='+(30*86400);
 })();
-if (token) boot(); else showAuth();
+function renderGuest(){
+  document.getElementById('root').innerHTML =
+  '<div class="topbar"><div class="topbar-in">'
+    + '<div class="brand"><div class="brand-mark">'+IC_KEY+'</div><div><h1>Manager Key Pro</h1><p>PORTAL</p></div></div>'
+    + '<div class="tabs"><button class="tab-btn active">Kiểm tra key</button><button class="tab-btn" onclick="showAuth()">Đăng nhập</button></div>'
+  + '</div></div>'
+  + '<div class="wrap"><div id="content"></div></div>';
+  loadPage();
+}
+if (token) boot(); else { page='check'; renderGuest(); }
 </script>
 </body>
 </html>

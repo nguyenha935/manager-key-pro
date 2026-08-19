@@ -263,7 +263,8 @@ func (s *Server) handleMyUsage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	rows, err := s.db.SQL().Query(`
-		SELECT COALESCE(provider,''), COALESCE(model,''), input_tokens, output_tokens,
+		SELECT COALESCE(provider,''), COALESCE(model,''), COALESCE(requested_name,''),
+			input_tokens, output_tokens, cache_read_tokens, cache_creation_tokens,
 			cost, COALESCE(source,''), billed, status, created_at
 		FROM usage_records WHERE user_id = ? ORDER BY created_at DESC LIMIT 100`, sess.UserID)
 	if err != nil {
@@ -272,20 +273,24 @@ func (s *Server) handleMyUsage(w http.ResponseWriter, r *http.Request) {
 	}
 	defer rows.Close()
 	type row struct {
-		Provider     string `json:"provider"`
-		Model        string `json:"model"`
-		InputTokens  int64  `json:"input_tokens"`
-		OutputTokens int64  `json:"output_tokens"`
-		Cost         int64  `json:"cost"`
-		Source       string `json:"source"`
-		Billed       int    `json:"billed"`
-		Status       string `json:"status"`
-		CreatedAt    int64  `json:"created_at"`
+		Provider            string `json:"provider"`
+		Model               string `json:"model"`
+		Alias               string `json:"alias"`
+		InputTokens         int64  `json:"input_tokens"`
+		OutputTokens        int64  `json:"output_tokens"`
+		CacheReadTokens     int64  `json:"cache_read_tokens"`
+		CacheCreationTokens int64  `json:"cache_creation_tokens"`
+		Cost                int64  `json:"cost"`
+		Source              string `json:"source"`
+		Billed              int    `json:"billed"`
+		Status              string `json:"status"`
+		CreatedAt           int64  `json:"created_at"`
 	}
 	var out []row
 	for rows.Next() {
 		var r row
-		if err := rows.Scan(&r.Provider, &r.Model, &r.InputTokens, &r.OutputTokens,
+		if err := rows.Scan(&r.Provider, &r.Model, &r.Alias, &r.InputTokens, &r.OutputTokens,
+			&r.CacheReadTokens, &r.CacheCreationTokens,
 			&r.Cost, &r.Source, &r.Billed, &r.Status, &r.CreatedAt); err != nil {
 			writeJSON(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
 			return
@@ -313,6 +318,8 @@ func (s *Server) handlePublicPackages(w http.ResponseWriter, r *http.Request) {
 		QuotaKind    string   `json:"quota_kind"`
 		QuotaScope   string   `json:"quota_scope"`
 		QuotaAmount  int64    `json:"quota_amount"`
+		PlanType     string   `json:"plan_type"`
+		WindowHours  int64    `json:"window_hours"`
 		DurationDays int64    `json:"duration_days"`
 		PriceCredit  int64    `json:"price_credit"`
 		Models       []string `json:"allowed_models"`
@@ -322,7 +329,7 @@ func (s *Server) handlePublicPackages(w http.ResponseWriter, r *http.Request) {
 		var models []string
 		_ = json.Unmarshal([]byte(p.ModelsJSON), &models)
 		out = append(out, view{p.ID, p.Name, p.Description, p.QuotaKind, p.QuotaScope,
-			p.QuotaAmount, p.DurationDays, p.PriceCredit, models})
+			p.QuotaAmount, p.PlanType, p.WindowHours, p.DurationDays, p.PriceCredit, models})
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"packages": out})
 }
@@ -467,4 +474,40 @@ func (s *Server) handleIndex(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.Header().Set("Cache-Control", "no-store")
 	w.Write([]byte(portalUIHTML))
+}
+
+// handleKeyCheck is the public key-check endpoint (design §7): no session required.
+// Accepts Authorization Bearer / X-Api-Key / ?key= and returns status + remaining.
+func (s *Server) handleKeyCheck(w http.ResponseWriter, r *http.Request) {
+	plaintext := ""
+	if auth := r.Header.Get("Authorization"); strings.HasPrefix(strings.ToLower(auth), "bearer ") {
+		plaintext = strings.TrimSpace(auth[7:])
+	}
+	if plaintext == "" {
+		plaintext = r.Header.Get("X-Api-Key")
+	}
+	if plaintext == "" {
+		plaintext = r.URL.Query().Get("key")
+	}
+	if plaintext == "" {
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "missing key"})
+		return
+	}
+	k, errKey := s.db.Keys().ByHash(crypto.HashKey(plaintext))
+	if errKey != nil {
+		writeJSON(w, http.StatusUnauthorized, map[string]string{"error": "invalid_api_key"})
+		return
+	}
+	remaining := k.QuotaAmount - k.QuotaUsed
+	if remaining < 0 {
+		remaining = 0
+	}
+	writeJSON(w, http.StatusOK, map[string]any{
+		"status": k.Status, "prefix": k.Prefix, "name": k.Name,
+		"quota_kind": k.QuotaKind, "quota_scope": k.QuotaScope,
+		"quota_amount": k.QuotaAmount, "quota_used": k.QuotaUsed, "quota_remaining": remaining,
+		"plan_type": k.PlanType, "window_hours": k.WindowHours,
+		"period_end": k.PeriodEnd, "expires_at": k.ExpiresAt,
+		"overflow_to_wallet": k.OverflowToWallet, "rpm": k.RPM,
+	})
 }

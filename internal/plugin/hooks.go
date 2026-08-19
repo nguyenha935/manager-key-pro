@@ -9,6 +9,7 @@ import (
 	"github.com/nguyenha935/manager-key-pro/internal/billing"
 	"github.com/nguyenha935/manager-key-pro/internal/crypto"
 	"github.com/nguyenha935/manager-key-pro/internal/logging"
+	"github.com/nguyenha935/manager-key-pro/internal/policy"
 	"github.com/nguyenha935/manager-key-pro/internal/store"
 )
 
@@ -62,6 +63,16 @@ func handleAuthenticate(payload []byte) ([]byte, error) {
 		resp := frontendAuthResponse{Authenticated: false}
 		raw, _ := json.Marshal(resp)
 		return okEnvelopeJSON(string(raw))
+	}
+	// The owning user gates the key too: pending/disabled/banned owners are
+	// rejected even while the key row itself is still "active" (design §9).
+	if user, errUser := app.db.Users().ByID(key.UserID); errUser == nil {
+		if d := policy.CheckUserStatus(user); !d.Allowed {
+			log.Printf("[mkp] auth denied key %s: user %s status %s", key.ID, user.ID, user.Status)
+			resp := frontendAuthResponse{Authenticated: false}
+			raw, _ := json.Marshal(resp)
+			return okEnvelopeJSON(string(raw))
+		}
 	}
 
 	// Principal flows into UsageRecord.APIKey — PoC confirmed this works.
@@ -124,11 +135,33 @@ func getQuery(query map[string][]string, name string) string {
 type interceptRequest struct {
 	RequestID      string              `json:"RequestID"`
 	TraceID        string              `json:"TraceID"`
+	SourceFormat   string              `json:"SourceFormat"`
 	Model          string              `json:"Model"`
 	RequestedModel string              `json:"RequestedModel"`
 	Stream         bool                `json:"Stream"`
 	Headers        map[string][]string `json:"Headers"`
+	Body           []byte              `json:"Body"`
 	Metadata       map[string]any      `json:"Metadata"`
+}
+
+// terminateJSON builds a RequestInterceptResponse that stops the request with
+// the documented error shape (design §9).
+func terminateJSON(status int, code, msg string, retryAfter int) string {
+	headers := map[string][]string{"Content-Type": {"application/json"}}
+	if retryAfter > 0 {
+		headers["Retry-After"] = []string{fmt.Sprintf("%d", retryAfter)}
+	}
+	body, _ := json.Marshal(map[string]any{
+		"error": map[string]any{"type": code, "message": msg},
+	})
+	resp := map[string]any{
+		"Terminate":       true,
+		"StatusCode":      status,
+		"ResponseHeaders": headers,
+		"ResponseBody":    string(body),
+	}
+	raw, _ := json.Marshal(resp)
+	return string(raw)
 }
 
 func handleInterceptBefore(payload []byte) ([]byte, error) {
@@ -150,9 +183,44 @@ func handleInterceptBefore(payload []byte) ([]byte, error) {
 	if errKey != nil {
 		return okEnvelopeJSON(`{}`)
 	}
+
+	// Policy gates (design §9): models, providers, IP, RPM.
+	if d := policy.CheckModel(key, req.RequestedModel, req.Model); !d.Allowed {
+		return okEnvelopeJSON(terminateJSON(d.Status, d.Code, d.Message, 0))
+	}
+	if d := policy.CheckProvider(key, providerFromCandidate(req.Model)); !d.Allowed {
+		return okEnvelopeJSON(terminateJSON(d.Status, d.Code, d.Message, 0))
+	}
+	if d := policy.CheckIP(key, clientIP(req.Headers)); !d.Allowed {
+		return okEnvelopeJSON(terminateJSON(d.Status, d.Code, d.Message, 0))
+	}
+	if d := policy.CheckRPM(key); !d.Allowed {
+		return okEnvelopeJSON(terminateJSON(d.Status, d.Code, d.Message, d.RetryAfterSec))
+	}
+
+	// Capture the request context for full-mode logging (redacted, capped).
+	logging.CaptureRequest(app.db, key.ID, req.RequestID, string(req.Body))
+
 	// Place a hold once per client request.
 	billing.Hold(app.db, req.RequestID, key.ID, key.UserID, req.Model)
 	return okEnvelopeJSON(`{}`)
+}
+
+// providerFromCandidate extracts a provider hint from an AuthID-style string
+// ("provider:kind:id"). Empty string means no restriction applies.
+func providerFromCandidate(model string) string {
+	return ""
+}
+
+// clientIP reads the best-effort client address from common proxy headers.
+func clientIP(headers map[string][]string) string {
+	for _, name := range []string{"X-Forwarded-For", "X-Real-Ip", "Cf-Connecting-Ip"} {
+		if v := getHeader(headers, name); v != "" {
+			parts := strings.Split(v, ",")
+			return strings.TrimSpace(parts[0])
+		}
+	}
+	return ""
 }
 
 func handleInterceptAfter(payload []byte) ([]byte, error) {
@@ -165,30 +233,18 @@ func handleUsage(payload []byte) ([]byte, error) {
 	if app == nil {
 		return okEnvelopeJSON(`{}`)
 	}
+	var rec billing.UsageRecord
+	if errUnmarshal := json.Unmarshal(payload, &rec); errUnmarshal == nil {
+		logging.WriteUsage(app.db, rec)
+	}
 	if errCharge := billing.HandleUsageJSON(app.db, payload); errCharge != nil {
 		log.Printf("[mkp] charge error: %v", errCharge)
 		// Still log the attempt so the admin can see the failure.
-		var rec billing.UsageRecord
-		if errUnmarshal := json.Unmarshal(payload, &rec); errUnmarshal == nil {
-			logging.Write(app.db, logging.Entry{
-				KeyID: rec.APIKey, Model: rec.Model, Provider: rec.Provider,
-				Status: "failed", ErrorMessage: errCharge.Error(),
-			})
-		}
-		return okEnvelopeJSON(`{}`)
-	}
-	// Standard / full log entry for successful charges.
-	var rec billing.UsageRecord
-	if errUnmarshal := json.Unmarshal(payload, &rec); errUnmarshal == nil {
-		status := "ok"
-		if rec.Failed {
-			status = "failed"
-		}
 		logging.Write(app.db, logging.Entry{
 			KeyID: rec.APIKey, Model: rec.Model, Provider: rec.Provider,
-			Status: status, InputTokens: rec.Detail.InputTokens,
-			OutputTokens: rec.Detail.OutputTokens,
+			Status: "failed", ErrorMessage: errCharge.Error(),
 		})
+		return okEnvelopeJSON(`{}`)
 	}
 	return okEnvelopeJSON(`{}`)
 }
@@ -202,12 +258,16 @@ func handleComplete(payload []byte) ([]byte, error) {
 	var req struct {
 		RequestID string `json:"RequestID"`
 		Outcome   string `json:"Outcome"`
+		Error     string `json:"Error"`
 	}
 	if errUnmarshal := json.Unmarshal(payload, &req); errUnmarshal != nil {
 		return okEnvelopeJSON(`{}`)
 	}
 	if req.Outcome != "succeeded" {
 		billing.Release(app.db, req.RequestID)
+		if req.Error != "" {
+			logging.WriteFailure(app.db, req.RequestID, req.Outcome, req.Error)
+		}
 	}
 	// Periodically purge full-mode logs past their TTL (cheap, once per request).
 	logging.Purge(app.db)

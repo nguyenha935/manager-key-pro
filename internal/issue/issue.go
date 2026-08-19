@@ -17,6 +17,8 @@ type Spec struct {
 	QuotaKind   string
 	QuotaScope  string
 	QuotaAmount int64
+	PlanType    string // lifetime | windowed
+	WindowHours int64  // >0 custom window (5h / 10d presets)
 	ExpiresAt   int64 // -1 = never
 	RPM         int
 	Models      []string
@@ -47,6 +49,8 @@ func Key(db *store.DB, secretKey []byte, userID string, spec Spec, actor string)
 		QuotaKind:     spec.QuotaKind,
 		QuotaScope:    spec.QuotaScope,
 		QuotaAmount:   spec.QuotaAmount,
+		PlanType:      spec.PlanType,
+		WindowHours:   spec.WindowHours,
 		ExpiresAt:     spec.ExpiresAt,
 		PackageID:     spec.PackageID,
 		AllowedModels: spec.Models,
@@ -95,6 +99,11 @@ func BuyPackage(db *store.DB, secretKey []byte, userID, packageID, kind, renewKe
 	if len(pkg.ModelsJSON) > 2 {
 		_ = jsonUnmarshalList(pkg.ModelsJSON, &models)
 	}
+	scope := pkg.QuotaScope
+	if pkg.WindowHours > 0 && scope == "lifetime" {
+		// A custom window (5h / 10d) needs a cyclic scope so EnsurePeriod runs.
+		scope = "day"
+	}
 
 	if kind == "renew" {
 		// Extend the old key: add quota, extend expiry, reactivate.
@@ -120,8 +129,10 @@ func BuyPackage(db *store.DB, secretKey []byte, userID, packageID, kind, renewKe
 	}
 
 	spec := Spec{
-		Name: pkg.Name, QuotaKind: pkg.QuotaKind, QuotaScope: pkg.QuotaScope,
-		QuotaAmount: pkg.QuotaAmount, ExpiresAt: expires, RPM: pkg.RPM,
+		Name: pkg.Name, QuotaKind: pkg.QuotaKind, QuotaScope: scope,
+		QuotaAmount: pkg.QuotaAmount,
+		PlanType: pkg.PlanType, WindowHours: pkg.WindowHours,
+		ExpiresAt: expires, RPM: pkg.RPM,
 		Models: models, PackageID: pkg.ID,
 	}
 	k, plainKey, errKey := Key(db, secretKey, userID, spec, "user:"+userID)

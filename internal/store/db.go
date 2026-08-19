@@ -47,6 +47,15 @@ func (d *DB) migrate() error {
 	if _, errExec := d.sql.Exec(schemaSQL); errExec != nil {
 		return fmt.Errorf("apply schema: %w", errExec)
 	}
+	version, errVersion := d.SchemaVersion()
+	if errVersion != nil {
+		return errVersion
+	}
+	if version < 2 {
+		if errV2 := d.migrateV2(); errV2 != nil {
+			return errV2
+		}
+	}
 	return nil
 }
 

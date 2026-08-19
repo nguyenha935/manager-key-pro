@@ -132,24 +132,23 @@ tbody tr:last-child td{border-bottom:none}
 .tbl-empty{padding:36px;text-align:center;color:var(--text-tertiary);font-size:13px}
 .actions{display:flex;gap:6px;flex-wrap:wrap}
 
-/* Sidebar + shell */
-.shell{display:flex;min-height:100vh}
-.sidebar{width:232px;flex-shrink:0;background:var(--bg-primary);border-right:1px solid var(--border-color);padding:20px 12px;position:sticky;top:0;height:100vh;overflow-y:auto}
-.brand{display:flex;align-items:center;gap:10px;padding:4px 10px 18px;margin-bottom:14px;border-bottom:1px solid var(--border-color)}
-.brand-mark{width:34px;height:34px;border-radius:10px;background:var(--primary-10);border:1px solid var(--primary-30);display:flex;align-items:center;justify-content:center;color:var(--primary-active);flex-shrink:0}
-.brand-mark svg{width:18px;height:18px}
-.brand h1{font-size:14px;font-weight:700;letter-spacing:-.01em;line-height:1.2}
-.brand p{font:500 10.5px var(--font-mono);color:var(--text-tertiary);letter-spacing:.06em;margin-top:2px}
-.nav{display:flex;flex-direction:column;gap:2px}
-.nav-item{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:var(--radius-md);cursor:pointer;color:var(--text-secondary);font-size:13.5px;font-weight:500;transition:background 150ms ease,color 150ms ease;position:relative;border:none;background:none;text-align:left;width:100%;font-family:var(--font-body)}
-.nav-item svg{width:17px;height:17px;flex-shrink:0}
+/* Top navigation (content-only iframe) */
+.shell{display:flex;flex-direction:column;min-height:100vh}
+.topbar{position:sticky;top:0;z-index:50;display:flex;align-items:center;gap:14px;padding:12px 22px;border-bottom:1px solid var(--border-color);background:var(--glass-bg-secondary);backdrop-filter:var(--glass-backdrop-filter);-webkit-backdrop-filter:var(--glass-backdrop-filter);flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:10px;margin-right:6px}
+.brand-mark{width:32px;height:32px;border-radius:9px;background:var(--primary-10);border:1px solid var(--primary-30);display:flex;align-items:center;justify-content:center;color:var(--primary-active);flex-shrink:0}
+.brand-mark svg{width:17px;height:17px}
+.brand h1{font-size:13.5px;font-weight:700;letter-spacing:-.01em;line-height:1.2}
+.brand p{font:500 10px var(--font-mono);color:var(--text-tertiary);letter-spacing:.06em;margin-top:2px}
+.topnav{display:flex;gap:2px;overflow-x:auto;flex:1;min-width:0}
+.nav-item{display:inline-flex;align-items:center;gap:8px;padding:8px 13px;border-radius:var(--radius-md);cursor:pointer;color:var(--text-secondary);font-size:13.5px;font-weight:500;transition:background 150ms ease,color 150ms ease;position:relative;border:none;background:none;text-align:left;font-family:var(--font-body);white-space:nowrap}
+.nav-item svg{width:16px;height:16px;flex-shrink:0}
 .nav-item:hover{background:var(--bg-tertiary);color:var(--text-primary)}
 .nav-item.active{background:var(--primary-8);color:var(--primary-active);font-weight:600}
-.nav-item.active::before{content:'';position:absolute;left:-12px;top:8px;bottom:8px;width:3px;border-radius:0 3px 3px 0;background:var(--primary-color)}
-.side-foot{margin-top:auto;padding:14px 10px 4px;border-top:1px solid var(--border-color);font:500 11px var(--font-mono);color:var(--text-quaternary);letter-spacing:.03em;display:flex;align-items:center;gap:8px}
+.side-foot{display:flex;align-items:center;gap:8px;font:500 11px var(--font-mono);color:var(--text-quaternary);letter-spacing:.03em}
 .conn-dot{width:7px;height:7px;border-radius:50%;background:var(--viz-success);flex-shrink:0}
-.main{flex:1;min-width:0;padding:34px 36px 60px}
-
+.main{flex:1;min-width:0;padding:30px 28px 60px}
+@media (max-width:768px){.topbar{flex-direction:column;align-items:flex-start;gap:8px}.topnav{width:100%}.main{padding:20px 16px 60px}}
 /* Page container */
 .page{max-width:1120px;width:100%;margin:0 auto;display:flex;flex-direction:column;gap:36px}
 .page-head{display:flex;flex-direction:column;gap:6px}
@@ -469,7 +468,132 @@ async function renderDashboard(){
   + '</div>';
 }
 
-/* ===== KEYS ===== */
+
+/* ===== KEY DETAIL ===== */
+async function keyDetail(id){
+  try {
+    const k = await apiGet('/keys/detail?id='+encodeURIComponent(id));
+    window._curKeyDetail = k;
+    const pct = k.quota_amount>0 ? Math.min(100, k.quota_used/k.quota_amount*100) : 0;
+    const mCls = pct>=90?'bad':pct>=70?'warn':'';
+    const resets = k.period_end>0 ? fmtShortDate(k.period_end) : 'không (lifetime)';
+    const bindRows = (k.bindings||[]).map(b=>'<tr>'
+      + '<td><span class="mono" style="font-size:12px">'+esc(b.account_ref)+'</span><div class="muted" style="font-size:11px">'+esc(b.account_type||'—')+(b.enabled?'':' · tắt')+'</div></td>'
+      + '<td class="mono">'+fmtInt(b.share_percent)+'%</td>'
+      + '<td class="mono">'+fmtInt(b.priority)+'</td>'
+      + '<td><button class="btn btn-secondary btn-sm" onclick="delBinding('+b.id+')">Xoá</button></td>'
+      + '</tr>').join('');
+    showModal(modalHead('Key '+esc(k.prefix))
+    + '<div class="modal-body" style="display:flex;flex-direction:column;gap:14px">'
+      + '<div class="panel" style="padding:16px"><div class="form-row">'
+        + '<div class="form-group"><label>Tên key</label><input id="kd-name" value="'+esc(k.name||'')+'"></div>'
+        + '<div class="form-group"><label>Chuyển sang user (ID)</label><input id="kd-user" value="'+esc(k.user_id)+'" placeholder="user_id"></div>'
+      + '</div>'
+      + '<div class="form-row">'
+        + '<div class="form-group"><label>Plan</label><select id="kd-plan"><option value="windowed"'+(k.plan_type==='windowed'?' selected':'')+'>Cửa sổ</option><option value="lifetime"'+(k.plan_type!=='windowed'?' selected':'')+'>Lifetime</option></select></div>'
+        + '<div class="form-group"><label>Loại quota</label><select id="kd-kind">'+['token','credit','request','unlimited'].map(x=>'<option value="'+x+'"'+(x===k.quota_kind?' selected':'')+'>'+x+'</option>').join('')+'</select></div>'
+      + '</div>'
+      + '<div class="form-row">'
+        + '<div class="form-group"><label>Hạn mức</label><input id="kd-amount" type="number" value="'+k.quota_amount+'"></div>'
+        + '<div class="form-group"><label>Window hours (0 = theo scope)</label><input id="kd-window" type="number" value="'+(k.window_hours||0)+'"></div>'
+      + '</div>'
+      + '<div class="form-row">'
+        + '<div class="form-group"><label>Expires (epoch ms, 0 = vô hạn)</label><input id="kd-expires" type="number" value="'+k.expires_at+'"></div>'
+        + '<div class="form-group"><label>RPM</label><input id="kd-rpm" type="number" value="'+k.rpm+'"></div>'
+      + '</div>'
+      + '<div class="form-group"><label style="display:flex;gap:8px;align-items:center;font-weight:500"><input type="checkbox" id="kd-overflow" '+(k.overflow_to_wallet?'checked':'')+'> Tràn phần thừa sang ví user</label></div>'
+      + '<div class="form-row">'
+        + '<div class="form-group"><label>Models cho phép (phẩy)</label><input id="kd-models" value="'+esc((k.allowed_models||[]).join(', '))+'"></div>'
+        + '<div class="form-group"><label>Providers cho phép</label><input id="kd-providers" value="'+esc((k.allowed_providers||[]).join(', '))+'"></div>'
+      + '</div>'
+      + '<div class="form-group"><label>IP allowlist (phẩy)</label><input id="kd-ips" value="'+esc((k.ip_allowlist||[]).join(', '))+'"></div>'
+      + '<div class="form-row">'
+        + '<div class="form-group"><label>Log mode</label><select id="kd-log"><option value="">theo toàn cục</option>'+['full','standard','error_only'].map(x=>'<option value="'+x+'"'+(x===k.log_mode?' selected':'')+'>'+x+'</option>').join('')+'</select></div>'
+        + '<div class="form-group"><label>Trạng thái</label><span class="badge badge-success" style="margin-top:6px">'+esc(k.status)+'</span></div>'
+      + '</div>'
+      + '<div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn btn-primary" onclick="saveKeyDetail(\''+k.id+'\')">Lưu thay đổi</button>'
+      + '<button class="btn btn-secondary" onclick="revealKey(\''+k.id+'\')">Xem key</button>'
+      + '<button class="btn btn-secondary" onclick="switchQuota(\''+k.id+'\',\''+k.quota_kind+'\',\''+k.quota_scope+'\','+k.quota_amount+','+k.expires_at+')">Hạn mức</button>'
+      + '<button class="btn btn-danger" onclick="deleteKey(\''+k.id+'\')">Xóa</button></div>'
+      + '</div>'
+      + '<div class="panel" style="padding:16px"><div class="panel-title" style="font-size:14px">Quota đã dùng</div>'
+        + '<div class="mono" style="font-size:13px;margin:6px 0">'+fmtInt(k.quota_used)+' / '+fmtInt(k.quota_amount)+' ('+pct.toFixed(1)+'%)</div>'
+        + '<div class="meter" style="height:8px"><i class="'+mCls+'" style="width:'+pct+'%"></i></div>'
+        + '<div class="muted" style="font-size:12px;margin-top:6px">Chu kỳ reset: <span class="mono">'+resets+'</span> · tạo: '+fmtShortDate(k.created_at)+(k.last_used_at?' · dùng: '+fmtShortDate(k.last_used_at):'')+'</div>'
+      + '</div>'
+      + '<div class="panel" style="padding:16px"><div class="panel-title" style="font-size:14px">Gán tài khoản upstream ('+fmtInt((k.bindings||[]).length)+' bindings)</div>'
+        + '<p class="note" style="font-size:12px;margin:4px 0 8px">Định tuyến key theo % quota của từng CPA account. Không gán = key tự do chọn.</p>'
+        + '<div class="tbl-wrap"><div class="tbl-scroll"><table><thead><tr><th>Tài khoản (AuthID/file id)</th><th>Share %</th><th>Ưu tiên</th><th></th></tr></thead><tbody>'
+        +(bindRows||'<tr><td colspan="4" class="tbl-empty">Chưa gán account nào.</td></tr>')+'</tbody></table></div></div>'
+        + '<div class="form-row" style="margin-top:10px">'
+          + '<div class="form-group"><label>Account ref</label><input id="kb-ref" placeholder="VD: claude:apikey:sk-ant-... hoặc file id"></div>'
+          + '<div class="form-group"><label>Share %</label><input id="kb-share" type="number" value="100"></div>'
+        + '</div>'
+        + '<div class="form-row">'
+          + '<div class="form-group"><label>Loại</label><select id="kb-type"><option value="oauth">oauth</option><option value="apikey">apikey</option><option value="file">file</option><option value="resource">resource</option><option value="endpoint">endpoint</option></select></div>'
+          + '<div class="form-group"><label>Ưu tiên</label><input id="kb-prio" type="number" value="0"></div>'
+        + '</div>'
+        + '<button class="btn btn-secondary" onclick="addBinding(\''+k.id+'\')">Thêm binding</button>'
+      + '</div>'
+    + '</div>');
+  } catch(e){ toast('Lỗi: '+e.message, true); }
+}
+async function saveKeyDetail(id){
+  try {
+    const models = ($('#kd-models').value||'').split(',').map(x=>x.trim()).filter(Boolean);
+    const providers = ($('#kd-providers').value||'').split(',').map(x=>x.trim()).filter(Boolean);
+    const ips = ($('#kd-ips').value||'').split(',').map(x=>x.trim()).filter(Boolean);
+    await apiPost('/keys/update', {
+      id,
+      name: $('#kd-name').value,
+      user_id: $('#kd-user').value,
+      allowed_models: models, allowed_providers: providers, ip_allowlist: ips,
+      rpm: parseInt($('#kd-rpm').value)||60,
+      log_mode: $('#kd-log').value || null,
+      overflow_to_wallet: $('#kd-overflow').checked,
+      set_models: true,
+    });
+    await apiPost('/keys/quota', {id,
+      quota_kind: $('#kd-kind').value,
+      quota_scope: $('#kd-plan').value==='windowed'?'day':'lifetime',
+      quota_amount: parseInt($('#kd-amount').value)||0, expires_at: parseInt($('#kd-expires').value)||0});
+    toast('Đã lưu cập nhật key');
+    closeModal(); navigate('keys');
+  } catch(e){ toast('Lỗi: '+e.message, true); }
+}
+async function addBinding(keyID){
+  try {
+    const ref = $('#kb-ref').value.trim();
+    if (!ref){ toast('Nhập account_ref trước', true); return; }
+    const existing = (window._curKeyDetail && window._curKeyDetail.bindings||[]).map(b=>({account_ref:b.account_ref,account_type:b.account_type,share_percent:b.share_percent,priority:b.priority,enabled:b.enabled}));
+    existing.push({account_ref: ref, account_type: $('#kb-type').value, share_percent: parseInt($('#kb-share').value)||100, priority: parseInt($('#kb-prio').value)||0, enabled: true});
+    await apiPost('/keys/bindings', {key_id: keyID, bindings: existing});
+    toast('Đã gán account'); closeModal(); keyDetail(keyID);
+  } catch(e){ toast('Lỗi: '+e.message, true); }
+}
+async function delBinding(bindingID){
+  const k = window._curKeyDetail;
+  if (!k) return;
+  if (!confirm('Xoá binding này?')) return;
+  try {
+    const keep = (k.bindings||[]).filter(b=>b.id!==bindingID).map(b=>({account_ref:b.account_ref,account_type:b.account_type,share_percent:b.share_percent,priority:b.priority,enabled:b.enabled}));
+    await apiPost('/keys/bindings', {key_id: k.id, bindings: keep});
+    toast('Đã xoá binding'); closeModal(); keyDetail(k.id);
+  } catch(e){ toast('Lỗi: '+e.message, true); }
+}
+{
+  const plan = $('#ck-plan') ? $('#ck-plan').value : 'windowed';
+  const winRow = $('#ck-window-row');
+  if (winRow) winRow.style.display = plan === 'windowed' ? '' : 'none';
+  const scopeSel = $('#ck-scope');
+  if (scopeSel) scopeSel.value = plan === 'windowed' ? 'day' : 'lifetime';
+}
+function onWindowChange(){
+  const w = $('#ck-window');
+  const custom = $('#ck-window-custom');
+  if (custom) custom.disabled = !(w && w.value === '0');
+}
+
 let _usersCache = [];
 async function renderKeys(){
   const [data, users, pkgs] = await Promise.all([apiGet('/keys'), apiGet('/users'), apiGet('/packages')]);
@@ -515,13 +639,18 @@ function showCreateKey(){
     + '<div class="form-group"><label>User sở hữu</label><select id="ck-user"><option value="">— chọn user —</option>'+window._keyUserOpts+'</select></div>'
     + '<div class="form-group"><label>Tên key</label><input id="ck-name" placeholder="VD: Gói Pro 30 ngày"></div>'
     + '<div class="form-group"><label>Gói (chọn gói thì quota theo gói)</label><select id="ck-pkg"><option value="">— tự đặt quota —</option>'+window._keyPkgOpts+'</select></div>'
+    + '<div class="form-group"><label>Dạng sản phẩm — cửa sổ thời gian (5 giờ / 7 ngày / 10 ngày) hoặc lifetime</label><select id="ck-plan" onchange="toggleCreatePlan()"><option value="windowed">Cửa sổ thời gian</option><option value="lifetime">Lifetime (pool theo loại quota)</option></select></div>'
+    + '<div id="ck-window-row"><div class="form-row">'
+      + '<div class="form-group"><label>Cửa sổ</label><select id="ck-window" onchange="onWindowChange()"><option value="5">5 giờ</option><option value="168">7 ngày</option><option value="240">10 ngày</option><option value="0">Tuỳ chỉnh…</option></select></div>'
+      + '<div class="form-group"><label>Giờ tuỳ chỉnh</label><input id="ck-window-custom" type="number" placeholder="VD: 72" disabled></div>'
+    + '</div></div>'
     + '<div class="form-row">'
       + '<div class="form-group"><label>Loại quota</label><select id="ck-kind"><option value="token">token</option><option value="credit">credit</option><option value="request">request</option><option value="unlimited">unlimited</option></select></div>'
-      + '<div class="form-group"><label>Phạm vi</label><select id="ck-scope"><option value="lifetime">lifetime</option><option value="hour">hour</option><option value="day">day</option><option value="week">week</option><option value="month">month</option></select></div>'
+      + '<div class="form-group"><label>Phạm vi (lifetime chỉ có lifetime)</label><select id="ck-scope"><option value="lifetime">lifetime</option><option value="day">day</option><option value="week">week</option><option value="month">month</option><option value="hour">hour</option></select></div>'
     + '</div>'
     + '<div class="form-row">'
-      + '<div class="form-group"><label>Số lượng</label><input id="ck-amount" type="number" value="100000"></div>'
-      + '<div class="form-group"><label>Số ngày hết hạn (0 = ∞)</label><input id="ck-days" type="number" value="0"></div>'
+      + '<div class="form-group"><label>Hạn mức</label><input id="ck-amount" type="number" value="100000" title="Tổng quota trong 1 cửa sổ (windowed) hoặc trọn đời (lifetime)"></div>'
+      + '<div class="form-group"><label>Hạn dùng key (ngày, 0 = ∞)</label><input id="ck-days" type="number" value="0" title="Tuổi thọ key — tách riêng cửa sổ quota"></div>'
     + '</div>'
     + '<div class="form-group"><label style="display:flex;gap:8px;align-items:center;font-weight:500"><input type="checkbox" id="ck-overflow"> Cho tràn phần thừa sang ví user</label></div>'
     + '<button class="btn btn-primary btn-block" onclick="doCreateKey()">Tạo key</button>'
@@ -532,8 +661,17 @@ async function doCreateKey(){
     const body = { user_id: $('#ck-user').value, name: $('#ck-name').value,
       package_id: $('#ck-pkg').value || undefined, overflow_to_wallet: $('#ck-overflow').checked };
     if (!body.package_id){
-      body.quota_kind = $('#ck-kind').value; body.quota_scope = $('#ck-scope').value;
-      body.quota_amount = parseInt($('#ck-amount').value)||0;
+      body.plan_type = $('#ck-plan').value;
+      if (body.plan_type === 'windowed'){
+        let wh = parseInt($('#ck-window').value)||0;
+        if (wh === 0) wh = parseInt($('#ck-window-custom').value)||0;
+        body.window_hours = wh || 5;
+        body.quota_kind = $('#ck-kind').value;
+        body.quota_amount = parseInt($('#ck-amount').value)||0;
+      } else {
+        body.quota_kind = $('#ck-kind').value; body.quota_scope = $('#ck-scope').value;
+        body.quota_amount = parseInt($('#ck-amount').value)||0;
+      }
       const days = parseInt($('#ck-days').value)||0;
       if (days > 0) body.expires_at = Date.now() + days*86400000;
     }
@@ -607,7 +745,39 @@ async function deleteKey(id){
   catch(e){ toast('Lỗi: '+e.message, true); }
 }
 
+
 /* ===== USERS ===== */
+async function userSettings(id){
+  try {
+    const u = (await apiGet('/users')).users.find(x=>x.id===id);
+    if (!u){ toast('Không tìm thấy user', true); return; }
+    showModal(modalHead('Cài đặt '+esc(u.username))
+    + '<div class="modal-body" style="display:flex;flex-direction:column;gap:14px">'
+      + '<div class="form-group"><label>Tên đăng nhập</label><input id="us-user" value="'+esc(u.username)+'"></div>'
+      + '<div class="form-group"><label>Vai trò</label><select id="us-role"><option value="user"'+(u.role==='user'?' selected':'')+'>user</option><option value="admin"'+(u.role==='admin'?' selected':'')+'>admin</option></select></div>'
+      + '<div class="form-group"><label>Chế độ ví</label><select id="us-wallet"><option value="prepaid"'+(u.wallet_mode==='prepaid'||!u.wallet_mode?' selected':'')+'>prepaid (trừ trước)</option><option value="postpaid"'+(u.wallet_mode==='postpaid'?' selected':'')+'>postpaid (dùng trước, trừ sau)</option></select></div>'
+      + '<div class="form-group"><label>Hạn mức tín dụng (credit_limit)</label><input id="us-limit" type="number" value="'+u.credit_limit+'"></div>'
+      + '<div class="form-group"><label>Đặt lại mật khẩu — để trống nếu không đổi</label><input id="us-pass" type="password" placeholder="••••••••" autocomplete="new-password"></div>'
+      + '<div style="display:flex;gap:8px;flex-wrap:wrap">'
+        + '<button class="btn btn-primary" onclick="saveUserSettings(\''+id+'\')">Lưu cài đặt</button>'
+        + '<button class="btn btn-secondary" onclick="rechargeUser(\''+id+'\',\''+esc(u.username)+'\')">Nạp ví</button>'
+        + '<button class="btn btn-secondary" onclick="showLedger(\''+id+'\',\''+esc(u.username)+'\')">Sổ cái</button>'
+      + '</div>'
+    + '</div>');
+  } catch(e){ toast('Lỗi: '+e.message, true); }
+}
+async function saveUserSettings(id){
+  try {
+    await apiPost('/users/update', {
+      id, username: $('#us-user').value, role: $('#us-role').value,
+      wallet_mode: $('#us-wallet').value, credit_limit: parseInt($('#us-limit').value)||0
+    });
+    const pass = $('#us-pass').value;
+    if (pass) await apiPost('/users/reset-password', {user_id: id, password: pass});
+    toast('Đã lưu'); closeModal(); navigate('users');
+  } catch(e){ toast('Lỗi: '+e.message, true); }
+}
+
 async function renderUsers(){
   const data = await apiGet('/users');
   const users = data.users || [];
@@ -625,6 +795,7 @@ async function renderUsers(){
       + (u.status==='active' ? '<button class="btn btn-secondary btn-sm" onclick="setStatus(\''+u.id+'\',\'disabled\')">Khóa</button>'
                               : '<button class="btn btn-secondary btn-sm" onclick="setStatus(\''+u.id+'\',\'active\')">Mở</button>')
       + '<button class="btn btn-secondary btn-sm" onclick="rechargeUser(\''+u.id+'\',\''+esc(u.username)+'\')">Nạp ví</button>'
+      + '<button class="btn btn-secondary btn-sm" onclick="userSettings(\''+u.id+'\')">Cài đặt</button>'
       + '<button class="btn btn-ghost btn-sm" onclick="showLedger(\''+u.id+'\',\''+esc(u.username)+'\')">Sổ cái</button>'
     + '</div></td>'
   + '</tr>').join('');
@@ -697,7 +868,7 @@ async function renderPackages(){
   const [pkgs, orders] = await Promise.all([apiGet('/packages'), apiGet('/orders')]);
   const pkgRows = (pkgs.packages||[]).map(p => '<tr>'
     + '<td><strong>'+esc(p.name)+'</strong>'+(p.visible?'':' <span class="badge badge-warn">ẩn</span>')+'<div class="muted" style="font-size:12px;margin-top:2px">'+esc(p.description||'')+'</div></td>'
-    + '<td><span class="badge">'+esc(p.quota_kind)+'/'+esc(p.quota_scope)+'</span><div class="mono" style="font-size:12px;margin-top:3px">'+fmtInt(p.quota_amount)+'</div></td>'
+    + '<td><span class="badge">'+(p.plan_type==='windowed'?'⏱ '+fmtInt(p.window_hours||0)+' giờ':'∞ lifetime')+'</span><div class="mono" style="font-size:12px;margin-top:3px">'+esc(p.quota_kind)+'/'+esc(p.quota_scope)+' · '+fmtInt(p.quota_amount)+'</div></td>'
     + '<td>'+(p.duration_days>0 ? p.duration_days+' ngày' : '∞')+'</td>'
     + '<td class="mono">'+fmtMicro(p.price_credit)+'</td>'
     + '<td><div class="actions">'
@@ -735,9 +906,14 @@ function showPackageForm(pkg){
   + '<div class="modal-body">'
     + '<div class="form-group"><label>Tên gói</label><input id="pk-name" value="'+esc(pkg.name||'')+'"></div>'
     + '<div class="form-group"><label>Mô tả</label><input id="pk-desc" value="'+esc(pkg.description||'')+'"></div>'
+    + '<div class="form-group"><label>Dạng gói</label><select id="pk-plan" onchange="togglePkgPlan()"><option value="windowed"'+(pkg.plan_type==='windowed'?' selected':'')+'>Cửa sổ thời gian (5h/7d/10d/custom)</option><option value="lifetime"'+(pkg.plan_type!=='windowed'?' selected':'')+'>Lifetime</option></select></div>'
+    + '<div id="pk-window-row"><div class="form-row">'
+      + '<div class="form-group"><label>Cửa sổ</label><select id="pk-window" onchange="onPkgWindow()"><option value="5"'+(pkg.window_hours==5?' selected':'')+'>5 giờ</option><option value="168"'+(pkg.window_hours==168?' selected':'')+'>7 ngày</option><option value="240"'+(pkg.window_hours==240?' selected':'')+'>10 ngày</option><option value="0"'+((pkg.window_hours||0)>0 && ![5,168,240].includes(pkg.window_hours)?' selected':'')+'>Tuỳ chỉnh…</option></select></div>'
+      + '<div class="form-group"><label>Giờ tuỳ chỉnh</label><input id="pk-window-custom" type="number" value="'+(((pkg.window_hours||0)>0 && ![5,168,240].includes(pkg.window_hours))?pkg.window_hours:'')+'" '+(pkg.plan_type==='windowed'?'':'disabled')+'></div>'
+    + '</div></div>'
     + '<div class="form-row">'
       + '<div class="form-group"><label>Loại quota</label><select id="pk-kind">'+['credit','token','request','unlimited'].map(k=>'<option value="'+k+'"'+(k===(pkg.quota_kind||'token')?' selected':'')+'>'+k+'</option>').join('')+'</select></div>'
-      + '<div class="form-group"><label>Phạm vi</label><select id="pk-scope">'+['lifetime','hour','day','week','month'].map(k=>'<option value="'+k+'"'+(k===(pkg.quota_scope||'lifetime')?' selected':'')+'>'+k+'</option>').join('')+'</select></div>'
+      + '<div class="form-group"><label>Phạm vi (lifetime = lifetime; windowed = day window)</label><select id="pk-scope">'+['lifetime','day','week','month','hour'].map(k=>'<option value="'+k+'"'+(k===(pkg.quota_scope||'lifetime')?' selected':'')+'>'+k+'</option>').join('')+'</select></div>'
     + '</div>'
     + '<div class="form-row">'
       + '<div class="form-group"><label>Số lượng quota</label><input id="pk-amount" type="number" value="'+(pkg.quota_amount||100000)+'"></div>'
@@ -752,10 +928,31 @@ function showPackageForm(pkg){
   + '</div>');
 }
 const editPackage = p => showPackageForm(p);
+function togglePkgPlan(){
+  const plan = $('#pk-plan').value;
+  const row = $('#pk-window-row');
+  if (row) row.style.display = plan==='windowed' ? '' : 'none';
+  const custom = $('#pk-window-custom');
+  if (custom) custom.disabled = plan!=='windowed';
+  const scope = $('#pk-scope');
+  if (scope) scope.value = plan==='windowed' ? 'day' : 'lifetime';
+}
+function onPkgWindow(){
+  const w = $('#pk-window');
+  const custom = $('#pk-window-custom');
+  if (custom) custom.disabled = !(w && w.value==='0');
+}
+
 async function savePackage(id){
   try {
+    let wh = 0;
+    if ($('#pk-plan').value === 'windowed'){
+      wh = parseInt($('#pk-window').value)||0;
+      if (wh === 0) wh = parseInt($('#pk-window-custom').value)||0;
+    }
     const body = { name: $('#pk-name').value, description: $('#pk-desc').value,
-      quota_kind: $('#pk-kind').value, quota_scope: $('#pk-scope').value,
+      plan_type: $('#pk-plan').value, window_hours: wh,
+      quota_kind: $('#pk-kind').value, quota_scope: $('#pk-plan').value==='windowed' ? 'day' : $('#pk-scope').value,
       quota_amount: parseInt($('#pk-amount').value)||0, duration_days: parseInt($('#pk-days').value)||0,
       price_credit: parseInt($('#pk-price').value)||0, rpm: parseInt($('#pk-rpm').value)||60,
       visible: $('#pk-visible').checked };
@@ -847,6 +1044,19 @@ async function renderSystem(){
     + body
   + '</div>';
 }
+async function logDetail(id){
+  try {
+    const d = await apiGet('/logs/detail?id='+id);
+    showModal(modalHead('Log #'+id)
+    + '<div class="modal-body" style="display:flex;flex-direction:column;gap:12px">'
+      + '<div class="form-row"><div class="form-group"><label>Key</label><div class="mono" style="font-size:12px">'+esc(d.key_id||'—')+'</div></div><div class="form-group"><label>Model</label><div>'+esc(d.model||'—')+(d.alias&&d.alias!==d.model?' <span class="badge">alias: '+esc(d.alias)+'</span>':'')+'</div></div></div>'
+      + '<div class="form-row"><div class="form-group"><label>Tokens</label><div class="mono">'+fmtInt(d.input_tokens)+' in / '+fmtInt(d.output_tokens)+' out / '+fmtInt(d.cache_read_tokens)+' cache-read</div></div><div class="form-group"><label>Chi phí</label><div class="mono">'+fmtMicro(d.cost)+'</div></div></div>'
+      + '<div class="form-row"><div class="form-group"><label>Trạng thái</label><div>'+(d.status==='ok'?'<span class="badge badge-success">ok</span>':'<span class="badge badge-error">'+esc(d.status)+' / '+esc(d.error_code||'')+'</span>')+'</div></div><div class="form-group"><label>Provider</label><div>'+esc(d.provider||'—')+'</div></div></div>'
+      + '<div class="form-group"><label>Request context (mode full)</label><pre class="reveal-box" style="max-height:180px;overflow:auto;white-space:pre-wrap">'+esc(d.request_context||'—')+'</pre></div>'
+      + '<div class="form-group"><label>Response body (mode full)</label><pre class="reveal-box" style="max-height:180px;overflow:auto;white-space:pre-wrap">'+esc(d.response_body||'—')+'</pre></div>'
+    + '</div>');
+  } catch(e){ toast('Lỗi: '+e.message, true); }
+}
 async function sysLogs(){
   const r = await apiGet('/logs');
   const rows = (r.logs||[]).map(l => '<tr>'
@@ -854,7 +1064,12 @@ async function sysLogs(){
     + '<td>'+(l.mode==='full' ? '<span class="badge badge-error">full</span>' : l.mode==='error_only' ? '<span class="badge badge-warn">error</span>' : '<span class="badge">std</span>')+'</td>'
     + '<td class="mono" style="font-size:11px">'+esc(l.key_id||'—')+'</td>'
     + '<td>'+esc(l.provider||'')+'</td>'
-    + '<td class="mono" style="font-size:12px">'+(l.upstream_status||'')+' '+esc(l.error_code||'')+'</td>'
+    + '<td class="mono" style="font-size:11.5px">'+esc(l.model||'')+(l.alias&&l.alias!==l.model?'<div class="muted" style="font-size:10.5px">alias: '+esc(l.alias)+'</div>':'')+'</td>'
+    + '<td class="mono">'+fmtInt(l.input_tokens||0)+' / '+fmtInt(l.output_tokens||0)+'</td>'
+    + '<td class="mono">'+fmtMicro(l.cost||0)+'</td>'
+    + '<td class="mono" style="font-size:11px">'+esc(l.upstream_account||'—')+'</td>'
+    + '<td>'+(l.status==='ok'?'<span class="badge badge-success"><i class="badge-dot"></i>ok</span>':'<span class="badge badge-error">'+esc(l.status||('http '+l.upstream_status))+'</span>')+'</td>'
+    + '<td><button class="btn btn-ghost btn-sm" onclick="logDetail('+l.id+')">Chi tiết</button></td>'
   + '</tr>').join('');
   return '<div class="section">'
     + '<div class="panel"><div class="panel-title">Chế độ log — hiện tại: <span class="badge badge-warn" style="vertical-align:2px">'+esc(r.global_mode||'standard')+'</span></div>'
@@ -941,10 +1156,33 @@ async function sysBackup(){
         + '<button class="btn btn-danger" onclick="doRestore()">Restore từ file</button>'
       + '</div>'
     + '</div>'
-    + '<div class="tbl-wrap"><div class="tbl-scroll"><table>'
-    + '<thead><tr><th>Khóa</th><th>Giá trị</th></tr></thead><tbody>'+(rows||'<tr><td colspan="2" class="tbl-empty">Trống</td></tr>')+'</tbody>'
-    + '</table></div></div>'
+    + '<div class="panel"><div class="panel-title">Cấu hình hệ thống</div>'
+      + '<div class="form-row"><div class="form-group"><label>Tỷ giá thủ công (VNĐ/USD)</label><input id="st-fx" value="'+esc((st.settings||{}).vnd_per_usd||'25000')+'"></div>'
+      + '<div class="form-group"><label>Chế độ FX</label><select id="st-fxmode"><option value="manual"'+(st.settings.fx_mode==='manual'?' selected':'')+'>manual</option><option value="auto"'+(st.settings.fx_mode==='auto'?' selected':'')+'>auto</option></select></div></div>'
+      + '<div class="form-row"><div class="form-group"><label>Chế độ thưởng affiliate</label><select id="st-refmode"><option value="percent"'+(st.settings.referral_mode==='percent'?' selected':'')+'>% theo tầng</option><option value="fixed"'+(st.settings.referral_mode==='fixed'?' selected':'')+'>Cố định</option></select></div>'
+      + '<div class="form-group"><label>Tầng % (phẩy)</label><input id="st-reftiers" value="'+esc((st.settings.referral_tiers||'[10,3,1]'))+'"></div></div>'
+      + '<div class="form-row"><div class="form-group"><label>Thưởng cố định (micro)</label><input id="st-reffixed" type="number" value="'+esc(st.settings.referral_fixed_credit||'1000000')+'"></div>'
+      + '<div class="form-group"><label>Ngưỡng qualify (micro)</label><input id="st-refqualify" type="number" value="'+esc(st.settings.referral_qualify_recharge||'10000000')+'"></div></div>'
+      + '<div class="form-row"><div class="form-group"><label>Log toàn cục</label><select id="st-logmode"><option value="standard"'+(st.settings.log_mode_global==='standard'?' selected':'')+'>standard</option><option value="full"'+(st.settings.log_mode_global==='full'?' selected':'')+'>full</option><option value="error_only"'+(st.settings.log_mode_global==='error_only'?' selected':'')+'>error_only</option></select></div>'
+      + '<div class="form-group"><label>Full log TTL (giờ)</label><input id="st-ttl" type="number" value="'+esc(st.settings.full_log_retention_hours||'24')+'"></div></div>'
+      + '<button class="btn btn-primary" onclick="saveSettingsForm()">Lưu cấu hình</button>'
+    + '</div>'
   + '</div>';
+}
+async function saveSettingsForm(){
+  try {
+    await apiPost('/settings', {
+      vnd_per_usd: $('#st-fx').value,
+      fx_mode: $('#st-fxmode').value,
+      referral_mode: $('#st-refmode').value,
+      referral_tiers: $('#st-reftiers').value,
+      referral_fixed_credit: $('#st-reffixed').value,
+      referral_qualify_recharge: $('#st-refqualify').value,
+      log_mode_global: $('#st-logmode').value,
+      full_log_retention_hours: $('#st-ttl').value,
+    });
+    toast('Đã lưu cấu hình'); navigate('system');
+  } catch(e){ toast('Lỗi: '+e.message, true); }
 }
 async function downloadBackup(){
   try {
@@ -1011,11 +1249,11 @@ function renderApp(){
   ).join('');
   document.getElementById('root').innerHTML =
   '<div class="shell">'
-    + '<aside class="sidebar">'
-      + '<div class="brand"><div class="brand-mark">'+ICONS.keys+'</div><div><h1>Manager Key Pro</h1><p>ADMIN · v0.2.0</p></div></div>'
-      + '<nav class="nav">'+navItems+'</nav>'
+    + '<header class="topbar">'
+      + '<div class="brand"><div class="brand-mark">'+ICONS.keys+'</div><div><h1>Manager Key Pro</h1><p>ADMIN · v0.3.0</p></div></div>'
+      + '<nav class="topnav">'+navItems+'</nav>'
       + '<div class="side-foot"><span class="conn-dot"></span><span>connected</span></div>'
-    + '</aside>'
+    + '</header>'
     + '<main class="main"><div id="page-content"></div></main>'
   + '</div>';
   navigate(currentPage);

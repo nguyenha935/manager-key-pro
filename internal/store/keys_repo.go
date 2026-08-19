@@ -23,6 +23,8 @@ type Key struct {
 	QuotaUsed        int64
 	PeriodStart      int64
 	PeriodEnd        int64
+	PlanType         string
+	WindowHours      int64
 	ExpiresAt        int64
 	OverflowToWallet bool
 	PackageID        string
@@ -65,7 +67,7 @@ func (d *DB) Keys() *KeysRepo { return &KeysRepo{db: d} }
 
 const keyColumns = `id, user_id, key_hash, key_cipher, key_nonce, prefix, name, status,
 	quota_kind, quota_scope, quota_amount, quota_used,
-	COALESCE(period_start,0), COALESCE(period_end,0), expires_at, overflow_to_wallet,
+	COALESCE(period_start,0), COALESCE(period_end,0), plan_type, COALESCE(window_hours,0), expires_at, overflow_to_wallet,
 	COALESCE(package_id,''), COALESCE(allowed_models,'[]'), COALESCE(allowed_providers,'[]'),
 	COALESCE(ip_allowlist,'[]'), rpm, COALESCE(log_mode,''), COALESCE(pricing_overrides,''),
 	created_at, updated_at, COALESCE(last_used_at,0)`
@@ -76,7 +78,7 @@ func scanKey(row interface{ Scan(...any) error }) (Key, error) {
 	var overflow int
 	errScan := row.Scan(&k.ID, &k.UserID, &k.KeyHash, &k.KeyCipher, &k.KeyNonce, &k.Prefix, &k.Name, &k.Status,
 		&k.QuotaKind, &k.QuotaScope, &k.QuotaAmount, &k.QuotaUsed,
-		&k.PeriodStart, &k.PeriodEnd, &k.ExpiresAt, &overflow,
+		&k.PeriodStart, &k.PeriodEnd, &k.PlanType, &k.WindowHours, &k.ExpiresAt, &overflow,
 		&k.PackageID, &allowedModelsJSON, &allowedProvidersJSON,
 		&ipAllowlistJSON, &k.RPM, &k.LogMode, &k.PricingOverrides,
 		&k.CreatedAt, &k.UpdatedAt, &k.LastUsedAt)
@@ -104,6 +106,8 @@ type CreateKeyInput struct {
 	QuotaKind        string
 	QuotaScope       string
 	QuotaAmount      int64
+	PlanType         string // lifetime | windowed
+	WindowHours      int64  // >0 overrides scope length (5h / 10d presets); 0 = scope default
 	ExpiresAt        int64  // -1 = never
 	PackageID        string // empty when admin-created without a package
 	AllowedModels    []string
@@ -131,15 +135,16 @@ func (r *KeysRepo) Create(input CreateKeyInput) (Key, error) {
 	now := Now()
 	_, errExec := r.db.sql.Exec(`
 		INSERT INTO keys (id, user_id, key_hash, key_cipher, key_nonce, prefix, name, status,
-			quota_kind, quota_scope, quota_amount, quota_used, expires_at, overflow_to_wallet,
+			quota_kind, quota_scope, quota_amount, quota_used, plan_type, window_hours, expires_at, overflow_to_wallet,
 			package_id, allowed_models, allowed_providers, ip_allowlist, rpm,
 			created_at, updated_at)
 		VALUES (?, ?, ?, ?, ?, ?, ?, 'active',
-			?, ?, ?, 0, ?, 0,
+			?, ?, ?, 0, ?, ?, ?, 0,
 			?, ?, ?, ?, ?,
 			?, ?)`,
 		id, input.UserID, input.KeyHash, input.KeyCipher, input.KeyNonce, input.Prefix, input.Name,
-		input.QuotaKind, input.QuotaScope, input.QuotaAmount, input.ExpiresAt,
+		input.QuotaKind, input.QuotaScope, input.QuotaAmount,
+		derivePlanType(input.PlanType, input.QuotaScope), nullWindowHours(input.WindowHours), input.ExpiresAt,
 		nullIfEmpty(input.PackageID), encodeJSONList(input.AllowedModels),
 		encodeJSONList(input.AllowedProviders), encodeJSONList(input.IPAllowlist), input.RPM,
 		now, now)
@@ -265,6 +270,70 @@ func (r *KeysRepo) Delete(keyID string) error {
 	result, errExec := r.db.sql.Exec(`DELETE FROM keys WHERE id = ?`, keyID)
 	if errExec != nil {
 		return fmt.Errorf("delete key: %w", errExec)
+	}
+	return requireOneRow(result)
+}
+
+// derivePlanType falls back to deriving the plan form from the scope when the
+// caller did not set it explicitly.
+func derivePlanType(planType, scope string) string {
+	if planType == "windowed" || planType == "lifetime" {
+		return planType
+	}
+	switch scope {
+	case "hour", "day", "week", "month":
+		return "windowed"
+	default:
+		return "lifetime"
+	}
+}
+
+// nullWindowHours stores NULL for 0 so custom windows read clearly in SQL.
+func nullWindowHours(h int64) any {
+	if h <= 0 {
+		return nil
+	}
+	return h
+}
+
+// SetAccess updates the provider and IP allowlists in one call.
+func (r *KeysRepo) SetAccess(keyID string, providers, ips []string) error {
+	result, errExec := r.db.sql.Exec(
+		`UPDATE keys SET allowed_providers = ?, ip_allowlist = ?, updated_at = ? WHERE id = ?`,
+		encodeJSONList(providers), encodeJSONList(ips), Now(), keyID)
+	if errExec != nil {
+		return fmt.Errorf("set access: %w", errExec)
+	}
+	return requireOneRow(result)
+}
+
+// SetModels updates the model allowlist.
+func (r *KeysRepo) SetModels(keyID string, models []string) error {
+	result, errExec := r.db.sql.Exec(
+		`UPDATE keys SET allowed_models = ?, updated_at = ? WHERE id = ?`,
+		encodeJSONList(models), Now(), keyID)
+	if errExec != nil {
+		return fmt.Errorf("set models: %w", errExec)
+	}
+	return requireOneRow(result)
+}
+
+// SetRPM updates the per-key requests-per-minute limit.
+func (r *KeysRepo) SetRPM(keyID string, rpm int) error {
+	result, errExec := r.db.sql.Exec(
+		`UPDATE keys SET rpm = ?, updated_at = ? WHERE id = ?`, rpm, Now(), keyID)
+	if errExec != nil {
+		return fmt.Errorf("set rpm: %w", errExec)
+	}
+	return requireOneRow(result)
+}
+
+// Transfer moves a key to another user (admin action, audited by the caller).
+func (r *KeysRepo) Transfer(keyID, userID string) error {
+	result, errExec := r.db.sql.Exec(
+		`UPDATE keys SET user_id = ?, updated_at = ? WHERE id = ?`, userID, Now(), keyID)
+	if errExec != nil {
+		return fmt.Errorf("transfer key: %w", errExec)
 	}
 	return requireOneRow(result)
 }

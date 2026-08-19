@@ -27,6 +27,9 @@ func (s *Server) handleMyKeys(w http.ResponseWriter, r *http.Request) {
 		QuotaScope       string `json:"quota_scope"`
 		QuotaAmount      int64  `json:"quota_amount"`
 		QuotaUsed        int64  `json:"quota_used"`
+		PlanType         string `json:"plan_type"`
+		WindowHours      int64  `json:"window_hours"`
+		PeriodEnd        int64  `json:"period_end"`
 		ExpiresAt        int64  `json:"expires_at"`
 		OverflowToWallet bool   `json:"overflow_to_wallet"`
 		RPM              int    `json:"rpm"`
@@ -39,6 +42,7 @@ func (s *Server) handleMyKeys(w http.ResponseWriter, r *http.Request) {
 			ID: k.ID, Prefix: k.Prefix, Name: k.Name, Status: k.Status,
 			QuotaKind: k.QuotaKind, QuotaScope: k.QuotaScope,
 			QuotaAmount: k.QuotaAmount, QuotaUsed: k.QuotaUsed,
+			PlanType: k.PlanType, WindowHours: k.WindowHours, PeriodEnd: k.PeriodEnd,
 			ExpiresAt: k.ExpiresAt, OverflowToWallet: k.OverflowToWallet,
 			RPM: k.RPM, CreatedAt: k.CreatedAt, LastUsedAt: k.LastUsedAt,
 		})

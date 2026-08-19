@@ -5,7 +5,7 @@ package plugin
 func registrationMetadata() map[string]any {
 	return map[string]any{
 		"Name":             "Manager Key Pro",
-		"Version":          "0.1.0",
+		"Version":          "0.3.0",
 		"Author":           "nguyenha935",
 		"GitHubRepository": "https://github.com/nguyenha935/manager-key-pro",
 		"ConfigFields": []map[string]any{

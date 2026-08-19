@@ -2,34 +2,49 @@ package billing
 
 import (
 	"database/sql"
-	"fmt"
 	"log"
 
 	"github.com/nguyenha935/manager-key-pro/internal/store"
 )
 
 // DefaultHoldMicro is the base hold (0.5 credit) when pricing has no per-call value.
-const DefaultHoldMicro int64 = 500_000
+const DefaultHoldMicro float64 = 500_000
 
-// HoldAmount estimates how much to reserve for one request of the given model:
-// base (per-call credit when configured, else DefaultHoldMicro) x hold_multiplier.
-func HoldAmount(db *store.DB, model string) int64 {
-	price, errPrice := LoadPrice(db, model)
-	base := DefaultHoldMicro
-	if errPrice == nil && price.PerCallCredit > 0 {
-		base = price.PerCallCredit
+// DefaultHoldTokens is the token hold for token-kind keys (30k tokens ~ an
+// average request with some reasoning) when we have no better estimate.
+const DefaultHoldTokens int64 = 30_000
+
+// HoldAmount estimates how much to reserve for one request of the given model,
+// in the unit of the key's quota kind: micro-credit for credit, tokens for
+// token, 1 for request. Unlimited reserves nothing.
+func HoldAmount(db *store.DB, key store.Key, model string) int64 {
+	switch key.QuotaKind {
+	case "unlimited":
+		return 0
+	case "token":
+		// Rough upper bound of tokens in one request.
+		return DefaultHoldTokens
+	case "request":
+		return 1
+	default: // credit
+		price, errPrice := LoadPrice(db, model)
+		base := DefaultHoldMicro
+		if errPrice == nil && price.PerCallCredit > 0 {
+			base = price.PerCallCredit
+		}
+		mult := price.HoldMultiplier
+		if mult <= 0 {
+			mult = 1.5
+		}
+		return int64(base * mult)
 	}
-	mult := price.HoldMultiplier
-	if mult <= 0 {
-		mult = 1.5
-	}
-	return int64(float64(base) * mult)
 }
 
-// Hold creates an open reservation for one client request. It reserves from the
-// key quota first; when the key is exhausted and overflow is enabled it reserves
-// from the wallet instead. Never blocks the request: any error just skips the hold
-// (settle/release still work without one).
+// Hold creates an open reservation for one client request, in the unit of the
+// key's quota kind. It reserves from the key quota first; when the key is
+// exhausted and overflow is enabled it reserves micro-credit from the wallet
+// (wallet is always credit). Never blocks the request: any error just skips
+// the hold (settle/release still work without one).
 func Hold(db *store.DB, requestID, keyID, userID, model string) {
 	if requestID == "" || keyID == "" {
 		return
@@ -38,13 +53,15 @@ func Hold(db *store.DB, requestID, keyID, userID, model string) {
 	if errKey != nil {
 		return
 	}
-	hold := HoldAmount(db, model)
+	if errPeriod := EnsurePeriod(db, &key); errPeriod != nil {
+		log.Printf("[mkp] hold ensure period: %v", errPeriod)
+	}
+	hold := HoldAmount(db, key, model)
 	source := ""
 	amount := int64(0)
 
 	switch {
 	case key.QuotaKind == "unlimited":
-		// Nothing to reserve; record the reservation for tracking only.
 		source = "key_quota"
 		amount = 0
 	case key.HasQuota():
@@ -61,20 +78,22 @@ func Hold(db *store.DB, requestID, keyID, userID, model string) {
 		}
 		source = "key_quota"
 	case key.OverflowToWallet:
+		// Wallet is always micro-credit; estimate the hold in credit from pricing.
 		user, errUser := db.Users().ByID(userID)
 		if errUser != nil {
 			return
 		}
-		if !user.CanSpend(hold) {
+		holdMicro := HoldAmount(db, store.Key{QuotaKind: "credit"}, model)
+		if !user.CanSpend(holdMicro) {
 			return // wallet cannot cover the hold; usage-time charge will 402
 		}
 		refID := "hold:" + requestID
-		if _, errAdj := db.Users().AdjustBalance(userID, -hold, store.ReasonHold, refID, "system", keyID); errAdj != nil {
+		if _, errAdj := db.Users().AdjustBalance(userID, -holdMicro, store.ReasonHold, refID, "system", keyID); errAdj != nil {
 			log.Printf("[mkp] hold wallet: %v", errAdj)
 			return
 		}
 		source = "wallet"
-		amount = hold
+		amount = holdMicro
 	default:
 		return // exhausted, no overflow — nothing to hold
 	}
@@ -87,11 +106,12 @@ func Hold(db *store.DB, requestID, keyID, userID, model string) {
 	}
 }
 
-// Settle finalizes the reservation for a client request once the real cost is
-// known. It refunds the unused part of the hold back to its source and reports
-// any ADDITIONAL amount still owed beyond the hold (the caller charges that via
-// the normal quota/wallet path). Returns extra >= 0.
-func Settle(db *store.DB, keyID string, actualCost int64) (extra int64, settled bool) {
+// Settle finalizes the reservation for a client request once the real spend
+// (in the key's quota unit) is known. It refunds the unused part of the hold
+// back to its source and reports any ADDITIONAL amount still owed beyond the
+// hold (the caller charges that via the normal quota/wallet path).
+// Returns extra >= 0.
+func Settle(db *store.DB, keyID string, actualSpend int64) (extra int64, settled bool) {
 	var resID, source string
 	var hold int64
 	errRow := db.SQL().QueryRow(`
@@ -99,14 +119,14 @@ func Settle(db *store.DB, keyID string, actualCost int64) (extra int64, settled 
 		WHERE key_id = ? AND status = 'open'
 		ORDER BY created_at ASC LIMIT 1`, keyID).Scan(&resID, &source, &hold)
 	if errRow != nil {
-		return actualCost, false // no open reservation: charge the full cost
+		return actualSpend, false // no open reservation: charge the full cost
 	}
 
-	extra = actualCost - hold
+	extra = actualSpend - hold
 	if extra < 0 {
 		extra = 0
 	}
-	refund := hold - actualCost
+	refund := hold - actualSpend
 	if refund < 0 {
 		refund = 0
 	}
@@ -201,5 +221,3 @@ func ReleaseStale(db *store.DB, maxAgeMs int64) {
 		log.Printf("[mkp] released %d stale reservations", len(ids))
 	}
 }
-
-var _ = fmt.Sprintf // keep fmt for future use
